@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useRunLattice, useGetLatticeAgents, getGetLatticeAgentsQueryKey } from "@workspace/api-client-react";
+import { useRunLattice, useGetLatticeAgents, getGetLatticeAgentsQueryKey, useGetMarketPrices, getGetMarketPricesQueryKey } from "@workspace/api-client-react";
 import type { LatticeResult, BeliefToken } from "@workspace/api-client-react";
+import { TickerCombobox } from "@/components/ticker-combobox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -148,6 +149,8 @@ function extractSymbolFromText(text: string): string | null {
   for (const [regex, sym] of NL_NAME_MAP) {
     if (regex.test(text)) return sym;
   }
+  const tickerMatch = upper.match(/\b([A-Z]{1,5})\b/g);
+  if (tickerMatch && tickerMatch.length > 0) return tickerMatch[0];
   return null;
 }
 
@@ -280,7 +283,6 @@ function DebateAgentCard({
   onUpvote,
   challengeResult,
   onChallenge,
-  onSelect,
 }: {
   token: BeliefToken;
   symbol: string;
@@ -288,7 +290,6 @@ function DebateAgentCard({
   onUpvote: () => void;
   challengeResult?: ChallengeResult & { loading?: boolean };
   onChallenge: (text: string, prob: number) => void;
-  onSelect?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showChallenge, setShowChallenge] = useState(false);
@@ -306,13 +307,13 @@ function DebateAgentCard({
   }
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`w-full text-left rounded-xl border ${p.borderColor} bg-black/20 overflow-hidden`}
-    >
-      {/* Header */}
-      <div className="p-3.5 flex items-start gap-3">
+    <div className={`rounded-xl border ${p.borderColor} bg-black/20 overflow-hidden`}>
+      {/* Header — click to expand/collapse all rationale */}
+      <div
+        className="p-3.5 flex items-start gap-3 cursor-pointer select-none"
+        onClick={() => setExpanded((o) => !o)}
+        title="Click to expand full reasoning"
+      >
         <span className="text-2xl leading-none mt-0.5">{p.emoji}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1.5">
@@ -434,7 +435,7 @@ function DebateAgentCard({
           R{token.round} · {token.id.slice(0, 6)}
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -594,7 +595,6 @@ function DebatePhase({
             onUpvote={() => onUpvote(token.agentType)}
             challengeResult={challenges[token.agentType]}
             onChallenge={(text, prob) => onChallenge(token.agentType, text, prob)}
-            onSelect={() => onChallenge(token.agentType, `Explain your current thesis on ${symbol} in more detail.`, token.probability)}
           />
         ))}
       </div>
@@ -721,7 +721,6 @@ function DebateView({
                 onUpvote={() => {}}
                 challengeResult={undefined}
                 onChallenge={() => {}}
-                onSelect={() => {}}
               />
             ))}
           </div>
@@ -848,19 +847,19 @@ function NLSearchBar({
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-const KNOWN_SYMBOLS = ["BTC", "ETH", "SOL", "BNB", "NVDA", "TSLA", "AAPL", "MSFT", "AMZN", "META", "GOOGL", "SPY"];
-
 export default function Lattice() {
   const [symbol, setSymbol] = useState("");
   const [question, setQuestion] = useState("");
   const [timeframe, setTimeframe] = useState("7d");
   const runLattice = useRunLattice();
   const { data: agents } = useGetLatticeAgents({ query: { queryKey: getGetLatticeAgentsQueryKey() } });
+  const { data: prices } = useGetMarketPrices({ query: { queryKey: getGetMarketPricesQueryKey() } });
 
   const { agentUpvotes, upvoteAgent, resetUpvotes, setLastLatticeQuery } = useAppStore();
 
   const result = runLattice.data;
   const agentList = Array.isArray(agents) ? agents : [];
+  const priceList = Array.isArray(prices) ? prices : [];
 
   function handleNLSearch(sym: string, q: string) {
     setSymbol(sym);
@@ -906,16 +905,13 @@ export default function Lattice() {
 
       {/* Symbol + timeframe row */}
       <div className="flex gap-2">
-        <Select value={symbol} onValueChange={setSymbol}>
-          <SelectTrigger className="flex-1 bg-black/30 border-white/10 h-9 text-sm font-mono">
-            <SelectValue placeholder="Symbol" />
-          </SelectTrigger>
-          <SelectContent>
-            {KNOWN_SYMBOLS.map((s) => (
-              <SelectItem key={s} value={s} className="font-mono">{s}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <TickerCombobox
+          value={symbol}
+          onChange={(sym) => setSymbol(sym)}
+          options={priceList.map((p) => ({ symbol: p.symbol, name: p.name, price: p.price, type: p.type }))}
+          placeholder="Any ticker… BTC, NVDA, MSFT, HOOD…"
+          className="flex-1"
+        />
         <Select value={timeframe} onValueChange={setTimeframe}>
           <SelectTrigger className="w-24 bg-black/30 border-white/10 h-9 text-sm font-mono">
             <SelectValue />
