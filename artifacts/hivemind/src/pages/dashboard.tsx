@@ -38,6 +38,7 @@ export default function Dashboard() {
 
   const [selectedSymbol, setSelectedSymbol] = useState<string>("");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1w");
+  const predictionList = Array.isArray(predictions) ? predictions : [];
 
   const handleGenerate = () => {
     if (!selectedSymbol) return;
@@ -196,7 +197,7 @@ export default function Dashboard() {
           <div className="text-sm text-muted-foreground">Loading predictions...</div>
         ) : (
           <div className="space-y-3">
-            {predictions?.map((pred) => (
+            {predictionList.map((pred) => (
               <Card key={pred.id} className="bg-card/30 border-white/5 relative overflow-hidden">
                 <div
                   className={`absolute top-0 left-0 w-1 h-full ${
