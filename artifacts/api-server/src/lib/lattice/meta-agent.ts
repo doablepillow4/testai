@@ -1,4 +1,4 @@
-import type { BeliefToken, LatticePrediction, RegimeContext, ShapBreakdown, Direction } from "./types";
+import type { BeliefToken, LatticePrediction, RegimeContext, ShapBreakdown, Direction, BeliefDynamics } from "./types";
 import { nanoid } from "nanoid";
 import { describeRegime } from "./regime-detector";
 
@@ -21,7 +21,8 @@ export function runMetaAgent(
   symbol: string,
   timeframe: string,
   currentPrice: number,
-  parentIds: string[]
+  parentIds: string[],
+  beliefDynamics?: BeliefDynamics
 ): MetaOutput {
   let probability = synthesisToken.probability;
 
@@ -84,6 +85,7 @@ export function runMetaAgent(
     probability,
     targetPrice,
     currentPrice,
+    beliefDynamics,
   });
 
   return {
@@ -110,6 +112,7 @@ interface NarrativeParams {
   probability: number;
   targetPrice: number;
   currentPrice: number;
+  beliefDynamics?: BeliefDynamics;
 }
 
 function buildNarrative(p: NarrativeParams): string {
@@ -138,8 +141,10 @@ function buildNarrative(p: NarrativeParams): string {
   const directionVerb = p.direction === "bullish" ? "advance" : p.direction === "bearish" ? "decline" : "consolidate";
   const strengthWord = p.hivemindScore > 70 ? "high-conviction" : p.hivemindScore > 50 ? "moderate" : "low-conviction";
 
-  return [
-    `HPL-HPA v2 lattice analysis for ${p.symbol} (${p.timeframe} horizon):`,
+  const version = p.beliefDynamics ? "v3" : "v2";
+
+  const lines = [
+    `HPL-HPA ${version} lattice analysis for ${p.symbol} (${p.timeframe} horizon):`,
     ``,
     `Market Regime: ${regimeDesc}`,
     ``,
@@ -148,5 +153,34 @@ function buildNarrative(p: NarrativeParams): string {
     `Signal Attribution: ${hiveDesc}.${hiveMarketNote} AI technical ensemble accounts for ${aiPct}% of the forecast. ${geoDesc}`,
     ``,
     `Price Target: $${p.targetPrice.toFixed(2)} (${priceDelta}% ${p.direction === "bullish" ? "upside" : p.direction === "bearish" ? "downside" : "flat"} from current $${p.currentPrice.toFixed(2)}). The lattice expects ${p.symbol} to ${directionVerb} over the ${p.timeframe} window with calibrated probability of ${(p.probability * 100).toFixed(1)}%.`,
-  ].join("\n");
+  ];
+
+  // v3: append belief delta section
+  if (p.beliefDynamics) {
+    const d = p.beliefDynamics;
+    const deltaSign = d.delta >= 0 ? "+" : "";
+    const momSign = d.momentum >= 0 ? "+" : "";
+    const accSign = d.acceleration >= 0 ? "+" : "";
+
+    const shiftDesc: Record<typeof d.convictionShift, string> = {
+      strengthening: "conviction is STRENGTHENING — the lattice is growing more certain",
+      weakening: "conviction is WEAKENING — uncertainty is increasing",
+      reversing: "conviction is REVERSING — directional thesis has flipped",
+      stable: "conviction is STABLE — consistent with prior runs",
+    };
+
+    const firstRun = d.previousRunId === null;
+
+    lines.push(``);
+    lines.push(`Belief Delta (HPL-HPA v3 — Session ${d.sessionCount}):`);
+    if (firstRun) {
+      lines.push(`This is the first v3 run for ${p.symbol}. Belief state seeded. Future runs will show delta dynamics.`);
+    } else {
+      lines.push(`Δ Probability: ${deltaSign}${(d.delta * 100).toFixed(2)}% vs previous run (was ${d.previousDirection?.toUpperCase() ?? "unknown"}).`);
+      lines.push(`Momentum: ${momSign}${(d.momentum * 100).toFixed(2)}% rolling avg — ${shiftDesc[d.convictionShift]}.`);
+      lines.push(`Acceleration: ${accSign}${(d.acceleration * 100).toFixed(2)}% (Δ momentum). Stability score: ${(d.stability * 100).toFixed(0)}/100.`);
+    }
+  }
+
+  return lines.join("\n");
 }

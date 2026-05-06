@@ -25,6 +25,12 @@ export interface BeliefToken {
   shapGeo: number;
   liquidityScore: number;
   parentIds: string[];
+  // v3 delta fields — optional for full backward compatibility
+  delta?: number;
+  momentum?: number;
+  acceleration?: number;
+  stability?: number;
+  previousTokenId?: string;
 }
 
 export interface DebateRound {
@@ -61,6 +67,8 @@ export interface LatticeResult {
   causalNarrative: string;
   minorityReport: string | null;
   agentConsensus: number;
+  // v3 extension — undefined when useV3 is false
+  beliefDynamics?: BeliefDynamics;
 }
 
 export interface AgentState {
@@ -109,4 +117,47 @@ export interface NewsContext {
   weight: number;
   headlines: string[];
   breakingAlert: boolean;
+}
+
+// ─── v3: Persistent Delta Belief State ───────────────────────────────────────
+
+/**
+ * Persisted per-symbol state. One row per symbol in `belief_states`.
+ * Loaded at the start of each v3 run and saved at the end.
+ */
+export interface BeliefState {
+  symbol: string;
+  runId: string;
+  finalProbability: number;
+  finalDirection: Direction;
+  /** agentType → probability from the last run */
+  agentProbabilities: Record<string, number>;
+  hivemindScore: number;
+  regime: Regime;
+  /** Exponential moving average of recent probability deltas */
+  momentum: number;
+  /** Change in momentum (second derivative of probability) */
+  acceleration: number;
+  /** Last N probability deltas (most recent last) */
+  deltaHistory: number[];
+  sessionCount: number;
+}
+
+/**
+ * Computed belief dynamics returned alongside a v3 lattice result.
+ * Describes how the lattice's conviction has changed since the last run.
+ */
+export interface BeliefDynamics {
+  /** finalProbability - previous finalProbability (signed) */
+  delta: number;
+  /** Rolling average of deltaHistory */
+  momentum: number;
+  /** momentum - previousMomentum */
+  acceleration: number;
+  /** 0–1: how stable conviction has been across recent runs */
+  stability: number;
+  convictionShift: "strengthening" | "weakening" | "reversing" | "stable";
+  previousRunId: string | null;
+  previousDirection: Direction | null;
+  sessionCount: number;
 }

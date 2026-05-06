@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { latticeRunsTable, agentStatesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
-import type { LatticeResult, AgentState, RegimeStatus, TechnicalFeatures } from "./types";
+import type { LatticeResult, AgentState, BeliefDynamics, TechnicalFeatures } from "./types";
 import { detectRegime } from "./regime-detector";
 import { extractHiveSignal } from "./hive-agents";
 import {
@@ -15,6 +15,7 @@ import {
 import { runDevilsAdvocate, runTailRiskAgent } from "./critique-agents";
 import { synthesize } from "./synthesis-agent";
 import { runMetaAgent } from "./meta-agent";
+import { loadBeliefState, saveBeliefState, computeBeliefDynamics, enrichTokensWithDeltas } from "./belief-state";
 import {
   fetchStockHistory,
   fetchCryptoHistory,
@@ -95,10 +96,12 @@ async function persistAgentRun(agentType: string): Promise<void> {
 
 export async function runLattice(
   symbol: string,
-  timeframe: string
+  timeframe: string,
+  useV3 = false
 ): Promise<LatticeResult> {
   const runId = nanoid(12);
-  logger.info({ symbol, timeframe, runId }, "HPL lattice run started");
+  const version = useV3 ? "v3" : "v2";
+  logger.info({ symbol, timeframe, runId, version }, "HPL lattice run started");
 
   const isCrypto = symbol in CRYPTO_ID_MAP;
 
@@ -137,9 +140,11 @@ export async function runLattice(
 
   const { getNewsContextForSymbol } = await import("../news");
 
-  const [hive, newsContext] = await Promise.all([
+  // In v3 mode, load previous belief state in parallel with hive + news
+  const [hive, newsContext, prevState] = await Promise.all([
     extractHiveSignal(symbol),
     getNewsContextForSymbol(symbol).catch(() => ({ sentiment: 0, weight: 0, headlines: [], breakingAlert: false })),
+    useV3 ? loadBeliefState(symbol) : Promise.resolve(null),
   ]);
 
   const features: TechnicalFeatures = {
@@ -212,6 +217,43 @@ export async function runLattice(
   const allTokens = [hiveToken, ...hypothesisTokens, ...critiqueTokens, synthesis.token, meta.token];
   const allDebateRounds = [...devilResult.rounds, ...tailResult.rounds];
 
+  // ─── v3: Compute belief dynamics and enrich tokens ────────────────────────
+  let beliefDynamics: BeliefDynamics | undefined;
+
+  if (useV3) {
+    try {
+      const { dynamics, newState } = computeBeliefDynamics({
+        symbol,
+        runId,
+        finalProbability: meta.token.probability,
+        finalDirection: meta.finalPrediction.direction,
+        hivemindScore: meta.finalPrediction.hivemindScore,
+        regime: regime.regime,
+        allTokens,
+        prev: prevState,
+      });
+
+      // Enrich each token with its per-agent delta vs the previous run
+      if (prevState) {
+        enrichTokensWithDeltas(allTokens, prevState, dynamics);
+      }
+
+      await saveBeliefState(newState);
+      beliefDynamics = dynamics;
+
+      logger.info({
+        symbol,
+        runId,
+        delta: dynamics.delta,
+        momentum: dynamics.momentum,
+        convictionShift: dynamics.convictionShift,
+        sessionCount: dynamics.sessionCount,
+      }, "HPL-HPA v3 belief dynamics computed");
+    } catch (err) {
+      logger.warn({ err, symbol }, "v3 belief dynamics failed — result returned without dynamics");
+    }
+  }
+
   try {
     await db.insert(latticeRunsTable).values({
       id: runId,
@@ -236,7 +278,7 @@ export async function runLattice(
     logger.warn({ err }, "Failed to persist lattice run");
   }
 
-  logger.info({ symbol, runId, direction: meta.finalPrediction.direction, score: meta.finalPrediction.hivemindScore }, "HPL lattice run complete");
+  logger.info({ symbol, runId, direction: meta.finalPrediction.direction, score: meta.finalPrediction.hivemindScore, version }, "HPL lattice run complete");
 
   return {
     runId,
@@ -251,6 +293,7 @@ export async function runLattice(
     causalNarrative: meta.causalNarrative,
     minorityReport: synthesis.minorityReport,
     agentConsensus: synthesis.agentConsensus,
+    beliefDynamics,
   };
 }
 

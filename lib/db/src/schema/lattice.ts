@@ -30,5 +30,21 @@ export const agentStatesTable = pgTable("agent_states", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const beliefStatesTable = pgTable("belief_states", {
+  symbol: text("symbol").primaryKey(),
+  runId: text("run_id").notNull(),
+  finalProbability: real("final_probability").notNull(),
+  finalDirection: text("final_direction").notNull(),
+  agentProbabilities: text("agent_probabilities").notNull().default("{}"),
+  hivemindScore: real("hivemind_score").notNull(),
+  regime: text("regime").notNull(),
+  momentum: real("momentum").notNull().default(0),
+  acceleration: real("acceleration").notNull().default(0),
+  deltaHistory: text("delta_history").notNull().default("[]"),
+  sessionCount: integer("session_count").notNull().default(1),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export type LatticeRun = typeof latticeRunsTable.$inferSelect;
 export type AgentStateRow = typeof agentStatesTable.$inferSelect;
+export type BeliefStateRow = typeof beliefStatesTable.$inferSelect;

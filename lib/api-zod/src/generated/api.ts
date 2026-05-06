@@ -259,13 +259,15 @@ export const GetNewsResponseItem = zod.object({
 export const GetNewsResponse = zod.array(GetNewsResponseItem);
 
 /**
- * @summary Run Hivemind Predictive Lattice (HPL-HPA v2) for a symbol
+ * @summary Run Hivemind Predictive Lattice (HPL-HPA v2/v3) for a symbol
  */
 export const runLatticeBodyTimeframeDefault = `7d`;
 
 export const RunLatticeBody = zod.object({
   symbol: zod.string(),
   timeframe: zod.string().default(runLatticeBodyTimeframeDefault),
+  /** Enable v3 Persistent Delta Belief Lattice mode */
+  useV3: zod.boolean().optional().default(false),
 });
 
 export const RunLatticeResponse = zod.object({
@@ -288,6 +290,12 @@ export const RunLatticeResponse = zod.object({
       shapGeo: zod.number(),
       liquidityScore: zod.number(),
       parentIds: zod.array(zod.string()),
+      // v3 delta fields
+      delta: zod.number().optional(),
+      momentum: zod.number().optional(),
+      acceleration: zod.number().optional(),
+      stability: zod.number().optional(),
+      previousTokenId: zod.string().optional(),
     }),
   ),
   debateRounds: zod.array(
@@ -328,6 +336,19 @@ export const RunLatticeResponse = zod.object({
       }),
     )
     .nullish(),
+  /** v3: Belief dynamics vs the previous run for this symbol */
+  beliefDynamics: zod
+    .object({
+      delta: zod.number(),
+      momentum: zod.number(),
+      acceleration: zod.number(),
+      stability: zod.number(),
+      convictionShift: zod.enum(["strengthening", "weakening", "reversing", "stable"]),
+      previousRunId: zod.string().nullish(),
+      previousDirection: zod.enum(["bullish", "bearish", "neutral"]).nullish(),
+      sessionCount: zod.number(),
+    })
+    .optional(),
 });
 
 /**

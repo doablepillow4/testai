@@ -29,11 +29,11 @@ router.post("/lattice/run", async (req, res): Promise<void> => {
     return;
   }
 
-  const { symbol, timeframe = "7d" } = parsed.data;
+  const { symbol, timeframe = "7d", useV3 = false } = parsed.data;
 
   try {
     const [latticeResult, polyData] = await Promise.allSettled([
-      runLattice(symbol.toUpperCase(), timeframe),
+      runLattice(symbol.toUpperCase(), timeframe, useV3),
       fetchPolymarketData(30).catch(() => getFallbackMarkets(20)),
     ]);
 
