@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { useRunLattice, useGetLatticeAgents, getGetLatticeAgentsQueryKey, useGetMarketPrices, getGetMarketPricesQueryKey } from "@workspace/api-client-react";
 import type { LatticeResult, BeliefToken } from "@workspace/api-client-react";
 import { TickerCombobox } from "@/components/ticker-combobox";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Network, Zap, TrendingUp, TrendingDown, Minus, AlertTriangle, Shield,
-  ThumbsUp, MessageSquare, Send, ChevronDown, ChevronUp, Search, X, Sparkles,
+  ThumbsUp, MessageSquare, Send, ChevronDown, ChevronUp, Activity,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
@@ -120,39 +120,6 @@ const PERSONAS: Record<string, AgentPersona> = {
   },
 };
 
-// ─── NL Symbol Extractor ──────────────────────────────────────────────────────
-const NL_SYMBOLS = ["BTC", "ETH", "SOL", "BNB", "NVDA", "TSLA", "AAPL", "MSFT", "AMZN", "META", "GOOGL", "SPY", "DOGE", "PLTR", "COIN", "AMD", "NFLX"];
-
-const NL_NAME_MAP: [RegExp, string][] = [
-  [/bitcoin/i, "BTC"],
-  [/ethereum|ether\b/i, "ETH"],
-  [/solana/i, "SOL"],
-  [/nvidia|gpu|graphics card/i, "NVDA"],
-  [/tesla\b/i, "TSLA"],
-  [/apple\b|iphone/i, "AAPL"],
-  [/microsoft|azure|copilot/i, "MSFT"],
-  [/amazon\b|aws\b/i, "AMZN"],
-  [/alphabet|google/i, "GOOGL"],
-  [/facebook|instagram|zuckerberg/i, "META"],
-  [/semiconductor|chipmaker/i, "NVDA"],
-  [/s&p\s*500|spy\b/i, "SPY"],
-  [/dogecoin/i, "DOGE"],
-  [/palantir/i, "PLTR"],
-  [/coinbase/i, "COIN"],
-];
-
-function extractSymbolFromText(text: string): string | null {
-  const upper = text.toUpperCase();
-  for (const sym of NL_SYMBOLS) {
-    if (new RegExp(`\\b${sym}\\b`).test(upper)) return sym;
-  }
-  for (const [regex, sym] of NL_NAME_MAP) {
-    if (regex.test(text)) return sym;
-  }
-  const tickerMatch = upper.match(/\b([A-Z]{1,5})\b/g);
-  if (tickerMatch && tickerMatch.length > 0) return tickerMatch[0];
-  return null;
-}
 
 // ─── Challenge Hook ───────────────────────────────────────────────────────────
 interface ChallengeResult {
@@ -464,6 +431,68 @@ function HivemindGauge({ score }: { score: number }) {
   );
 }
 
+function DivergenceIndicator({ tokens }: { tokens: BeliefToken[] }) {
+  const debateTokens = tokens.filter((t) =>
+    ["hypothesis_momentum", "hypothesis_meanrevert", "hypothesis_volregime", "hypothesis_hive", "critique_devil", "critique_tailrisk"].includes(t.agentType)
+  );
+  if (debateTokens.length < 2) return null;
+
+  const bullish = debateTokens.filter((t) => t.probability > 0.54).length;
+  const bearish = debateTokens.filter((t) => t.probability < 0.46).length;
+  const neutral = debateTokens.length - bullish - bearish;
+  const total = debateTokens.length;
+
+  const isSplit = bullish > 0 && bearish > 0;
+  const isStrong = (bullish >= 4 || bearish >= 4);
+  const consensusPct = Math.max(bullish, bearish) / total;
+
+  const label = isStrong
+    ? `STRONG ${bullish >= 4 ? "BULL" : "BEAR"} CONSENSUS`
+    : isSplit
+    ? "AGENTS SPLIT"
+    : "MIXED SIGNALS";
+
+  const labelColor = isStrong
+    ? bullish >= 4 ? "text-emerald-400" : "text-red-400"
+    : "text-amber-400";
+  const borderColor = isStrong
+    ? bullish >= 4 ? "border-emerald-500/20" : "border-red-500/20"
+    : "border-amber-500/20";
+  const bgColor = isStrong
+    ? bullish >= 4 ? "bg-emerald-500/5" : "bg-red-500/5"
+    : "bg-amber-500/5";
+
+  return (
+    <div className={`rounded-xl border ${borderColor} ${bgColor} p-3.5 flex items-center gap-4`}>
+      <div className="flex items-center gap-2">
+        <Activity className={`w-4 h-4 ${labelColor}`} />
+        <span className={`text-[10px] font-mono font-700 ${labelColor} tracking-widest`}>{label}</span>
+      </div>
+      <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-1.5">
+          <div className="flex gap-0.5">
+            {debateTokens.map((t) => (
+              <div
+                key={t.id}
+                className={`w-3 h-3 rounded-sm ${
+                  t.probability > 0.54 ? "bg-emerald-500" : t.probability < 0.46 ? "bg-red-500" : "bg-amber-400"
+                }`}
+                title={`${PERSONAS[t.agentType]?.name ?? t.agentType}: ${(t.probability * 100).toFixed(0)}%`}
+              />
+            ))}
+          </div>
+          <span className="text-[10px] font-mono text-muted-foreground">
+            {bullish}B · {bearish}S · {neutral}N
+          </span>
+        </div>
+        <span className={`text-[10px] font-mono font-600 ${labelColor}`}>
+          {(consensusPct * 100).toFixed(0)}% agree
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function ConvergenceChart({ tokens }: { tokens: BeliefToken[] }) {
   const data = buildConvergenceData(tokens);
   const agentTypes = [...new Set(tokens.map((t) => t.agentType))];
@@ -673,6 +702,9 @@ function DebateView({
         </CardContent>
       </Card>
 
+      {/* Divergence indicator */}
+      <DivergenceIndicator tokens={result.tokens} />
+
       {/* Convergence chart */}
       <ConvergenceChart tokens={result.tokens} />
 
@@ -784,88 +816,20 @@ function DebateView({
   );
 }
 
-// ─── NL Search Bar ────────────────────────────────────────────────────────────
-function NLSearchBar({
-  onSearch,
-}: {
-  onSearch: (symbol: string, question: string) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [parsed, setParsed] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const sym = extractSymbolFromText(query);
-    setParsed(sym);
-  }, [query]);
-
-  function handleSubmit() {
-    const sym = parsed ?? query.trim().toUpperCase();
-    if (!sym) return;
-    onSearch(sym, query);
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="relative flex items-center bg-black/30 border border-primary/20 rounded-xl px-4 h-12 gap-3 focus-within:border-primary/50 focus-within:shadow-[0_0_0_1px_rgba(0,212,255,0.15)] transition-all">
-        <Search className="w-4 h-4 text-primary shrink-0" />
-        <input
-          ref={inputRef}
-          type="text"
-          className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-muted-foreground font-mono"
-          placeholder='Asset or question… e.g. "Will BTC hit $150k?", "NVDA AI momentum", "TSLA"'
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-        />
-        {query && (
-          <button onClick={() => { setQuery(""); setParsed(null); }} className="text-muted-foreground hover:text-white transition-colors">
-            <X className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      {query && (
-        <div className="flex items-center gap-2 px-1">
-          {parsed ? (
-            <>
-              <Sparkles className="w-3 h-3 text-primary" />
-              <span className="text-[11px] font-mono text-muted-foreground">Detected symbol:</span>
-              <span className="text-[11px] font-mono font-700 text-primary">{parsed}</span>
-              <span className="text-[10px] font-mono text-muted-foreground/50">· Press Enter or Run to analyze</span>
-            </>
-          ) : (
-            <>
-              <span className="text-[11px] font-mono text-amber-400/70">No known symbol detected.</span>
-              <span className="text-[10px] font-mono text-muted-foreground/50">The query will be used as the symbol directly.</span>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function Lattice() {
   const [symbol, setSymbol] = useState("");
-  const [question, setQuestion] = useState("");
   const [timeframe, setTimeframe] = useState("7d");
   const runLattice = useRunLattice();
   const { data: agents } = useGetLatticeAgents({ query: { queryKey: getGetLatticeAgentsQueryKey() } });
   const { data: prices } = useGetMarketPrices({ query: { queryKey: getGetMarketPricesQueryKey() } });
 
-  const { agentUpvotes, upvoteAgent, resetUpvotes, setLastLatticeQuery } = useAppStore();
+  const { agentUpvotes, upvoteAgent, resetUpvotes } = useAppStore();
 
   const result = runLattice.data;
   const agentList = Array.isArray(agents) ? agents : [];
   const priceList = Array.isArray(prices) ? prices : [];
-
-  function handleNLSearch(sym: string, q: string) {
-    setSymbol(sym);
-    setQuestion(q);
-    setLastLatticeQuery(sym, q);
-  }
 
   function handleRun() {
     if (!symbol) return;
@@ -888,20 +852,6 @@ export default function Lattice() {
           HPL-HPA v2 · 6-agent debate engine · 4 rounds
         </p>
       </div>
-
-      {/* NL Search */}
-      <NLSearchBar onSearch={handleNLSearch} />
-
-      {/* Question context display */}
-      {question && question.length > 6 && (
-        <div className="flex items-start gap-2.5 bg-primary/5 border border-primary/15 rounded-xl px-3.5 py-3">
-          <Sparkles className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-          <div>
-            <div className="text-[9px] font-mono text-primary/70 mb-0.5 tracking-widest uppercase">Question Context</div>
-            <p className="text-[12px] text-white/80 font-mono">"{question}"</p>
-          </div>
-        </div>
-      )}
 
       {/* Symbol + timeframe row */}
       <div className="flex gap-2">

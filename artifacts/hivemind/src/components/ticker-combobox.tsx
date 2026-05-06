@@ -16,11 +16,42 @@ interface TickerComboboxProps {
   className?: string;
 }
 
+const CRYPTO_ALIASES: Record<string, string> = {
+  BITCOIN: "BTC", BTC: "BTC",
+  ETHEREUM: "ETH", ETHER: "ETH", ETH: "ETH",
+  SOLANA: "SOL", SOL: "SOL",
+  CARDANO: "ADA", ADA: "ADA",
+  RIPPLE: "XRP", XRP: "XRP",
+  DOGECOIN: "DOGE", DOGE: "DOGE",
+  AVALANCHE: "AVAX", AVAX: "AVAX",
+  POLKADOT: "DOT", DOT: "DOT",
+  CHAINLINK: "LINK", LINK: "LINK",
+  POLYGON: "MATIC", MATIC: "MATIC",
+  UNISWAP: "UNI", UNI: "UNI",
+  LITECOIN: "LTC", LTC: "LTC",
+  SHIBA: "SHIB", SHIBAINU: "SHIB", SHIB: "SHIB",
+  BINANCE: "BNB", BNB: "BNB",
+  NEAR: "NEAR",
+  ATOM: "ATOM", COSMOS: "ATOM",
+  STELLAR: "XLM", XLM: "XLM",
+  APTOS: "APT", APT: "APT",
+  ARBITRUM: "ARB", ARB: "ARB",
+  OPTIMISM: "OP", OP: "OP",
+  TON: "TON",
+  PEPE: "PEPE",
+  WORLDCOIN: "WLD", WLD: "WLD",
+};
+
+function resolveAlias(query: string): string | null {
+  const up = query.trim().toUpperCase().replace(/\s+/g, "");
+  return CRYPTO_ALIASES[up] ?? null;
+}
+
 export function TickerCombobox({
   value,
   onChange,
   options,
-  placeholder = "Symbol or name… (e.g. BTC, NVDA, TSLA)",
+  placeholder = "Any ticker or name… BTC, ADA, NVDA, TSLA",
   className = "",
 }: TickerComboboxProps) {
   const [query, setQuery] = useState(value);
@@ -44,13 +75,19 @@ export function TickerCombobox({
   }, []);
 
   const q = query.trim().toUpperCase();
+  const aliasResolved = q ? resolveAlias(q) : null;
+
   const filtered = q
     ? options.filter(
-        (o) => o.symbol.includes(q) || o.name.toUpperCase().includes(q)
+        (o) =>
+          o.symbol.includes(q) ||
+          o.name.toUpperCase().includes(q) ||
+          (aliasResolved && o.symbol === aliasResolved)
       )
     : options;
 
-  const exactMatch = options.find((o) => o.symbol === q);
+  const exactMatch = options.find((o) => o.symbol === q || (aliasResolved && o.symbol === aliasResolved));
+  const customSymbol = aliasResolved ?? q;
   const isCustom = q.length > 0 && !exactMatch;
 
   function select(symbol: string, price?: number) {
@@ -86,10 +123,16 @@ export function TickerCombobox({
           onChange={(e) => { setQuery(e.target.value.toUpperCase()); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onKeyDown={(e) => {
-            if (e.key === "Escape") setOpen(false);
+            if (e.key === "Escape") { setOpen(false); }
             if (e.key === "Enter") {
-              if (filtered.length > 0) select(filtered[0].symbol, filtered[0].price);
-              else if (q.length > 0) select(q);
+              if (aliasResolved) {
+                const match = options.find((o) => o.symbol === aliasResolved);
+                select(aliasResolved, match?.price);
+              } else if (filtered.length > 0) {
+                select(filtered[0].symbol, filtered[0].price);
+              } else if (q.length > 0) {
+                select(q);
+              }
             }
           }}
         />
@@ -103,52 +146,56 @@ export function TickerCombobox({
       </div>
 
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-[hsl(222,32%,8%)] border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-56 overflow-y-auto">
-          {filtered.length > 0 ? (
-            <>
-              {filtered.map((opt) => (
-                <button
-                  key={opt.symbol}
-                  className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-white/[0.05] transition-colors text-left"
-                  onMouseDown={(e) => { e.preventDefault(); select(opt.symbol, opt.price); }}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-white/10 text-muted-foreground bg-white/[0.03]">
-                      {opt.type === "crypto" ? "CRYPTO" : "STOCK"}
-                    </span>
-                    <div>
-                      <div className="text-sm font-mono font-600 text-white">{opt.symbol}</div>
-                      <div className="text-[10px] text-muted-foreground">{opt.name}</div>
-                    </div>
-                  </div>
-                  <div className="text-[11px] font-mono text-primary">
-                    ${opt.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                </button>
-              ))}
-              {isCustom && (
-                <div className="border-t border-white/[0.06]">
-                  <button
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-primary/5 transition-colors text-left"
-                    onMouseDown={(e) => { e.preventDefault(); select(q); }}
-                  >
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-primary/30 text-primary bg-primary/5">CUSTOM</span>
-                    <span className="text-sm font-mono text-white">{q}</span>
-                  </button>
-                </div>
-              )}
-            </>
-          ) : q.length > 0 ? (
-            <button
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-primary/5 transition-colors text-left"
-              onMouseDown={(e) => { e.preventDefault(); select(q); }}
-            >
-              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-primary/30 text-primary bg-primary/5">CUSTOM</span>
-              <span className="text-sm font-mono text-white">{q}</span>
-            </button>
-          ) : (
-            <div className="px-3 py-3 text-center text-[11px] text-muted-foreground">Start typing to search</div>
+        <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-[hsl(222,32%,8%)] border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto">
+          {/* Custom/alias option always first when typed */}
+          {isCustom && (
+            <div className="border-b border-white/[0.06]">
+              <button
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-primary/10 transition-colors text-left"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const match = options.find((o) => o.symbol === customSymbol);
+                  select(customSymbol, match?.price);
+                }}
+              >
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-primary/30 text-primary bg-primary/5">
+                  {aliasResolved ? "ALIAS" : "CUSTOM"}
+                </span>
+                <span className="text-sm font-mono text-white font-semibold">{customSymbol}</span>
+                {aliasResolved && q !== aliasResolved && (
+                  <span className="text-[10px] text-muted-foreground font-mono">← {q}</span>
+                )}
+                <span className="text-[10px] text-muted-foreground ml-auto">Press Enter ↵</span>
+              </button>
+            </div>
           )}
+
+          {filtered.length > 0 ? (
+            filtered.map((opt) => (
+              <button
+                key={opt.symbol}
+                className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-white/[0.05] transition-colors text-left"
+                onMouseDown={(e) => { e.preventDefault(); select(opt.symbol, opt.price); }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-white/10 text-muted-foreground bg-white/[0.03]">
+                    {opt.type === "crypto" ? "CRYPTO" : "STOCK"}
+                  </span>
+                  <div>
+                    <div className="text-sm font-mono font-600 text-white">{opt.symbol}</div>
+                    <div className="text-[10px] text-muted-foreground">{opt.name}</div>
+                  </div>
+                </div>
+                <div className="text-[11px] font-mono text-primary">
+                  ${opt.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </button>
+            ))
+          ) : q.length === 0 ? (
+            <div className="px-3 py-3 text-center text-[11px] text-muted-foreground">Start typing to search</div>
+          ) : !isCustom ? (
+            <div className="px-3 py-3 text-center text-[11px] text-muted-foreground">No matches found</div>
+          ) : null}
         </div>
       )}
     </div>
