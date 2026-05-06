@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useGetPolymarketMarkets, getGetPolymarketMarketsQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Globe, BarChart2, CalendarDays } from "lucide-react";
+import { Globe, BarChart2, CalendarDays, Search } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Geopolitics() {
@@ -25,81 +25,89 @@ export default function Geopolitics() {
   }, [marketList, activeTab]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 animate-fade-up">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Geopolitics</h1>
-        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+        <h1 className="font-display text-[22px] font-700 text-white tracking-tight leading-none">Geopolitics</h1>
+        <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1.5 font-mono">
           <Globe className="w-3 h-3 text-primary" />
           Live odds from global prediction markets
         </p>
       </div>
 
-      {/* Category tabs — horizontally scrollable */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-4 px-4">
+      {/* Category tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4" style={{ scrollbarWidth: "none" }}>
         {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveTab(cat)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+            className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-semibold tracking-widest uppercase transition-all duration-200 ${
               activeTab === cat
-                ? "bg-primary text-primary-foreground"
-                : "bg-card/60 text-muted-foreground border border-white/5"
+                ? "bg-primary text-primary-foreground shadow-[0_0_12px_rgba(0,212,255,0.4)]"
+                : "bg-card/60 text-muted-foreground border border-white/[0.07] hover:border-white/20 hover:text-white"
             }`}
           >
-            {cat.charAt(0).toUpperCase() + cat.slice(1)}
+            {cat}
           </button>
         ))}
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <div className="space-y-3">
+          {[1,2,3].map(i => (
+            <div key={i} className="h-36 rounded-xl bg-card/40 border border-white/[0.05] animate-pulse" />
+          ))}
+        </div>
+      ) : filteredMarkets.length === 0 ? (
+        <div className="text-center py-12 border border-dashed border-white/10 rounded-xl">
+          <Search className="w-6 h-6 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-[12px] text-muted-foreground">No markets available.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {filteredMarkets.map((market) => (
-            <Card key={market.id} className="bg-card/30 border-white/5 hover:border-primary/30 transition-colors">
+            <Card key={market.id} className="bg-card/60 border-white/[0.07] card-hover backdrop-blur-sm overflow-hidden">
               <CardContent className="p-4">
-                <div className="flex justify-between items-start gap-3 mb-3">
-                  <h3 className="font-semibold text-white text-sm leading-snug">{market.question}</h3>
+                <div className="flex justify-between items-start gap-3 mb-4">
+                  <h3 className="font-semibold text-white text-[13px] leading-snug flex-1">{market.question}</h3>
                   {market.category && (
-                    <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground uppercase tracking-wider">
+                    <span className="shrink-0 text-[9px] font-mono font-semibold px-2 py-1 rounded bg-white/5 text-muted-foreground uppercase tracking-widest border border-white/[0.06]">
                       {market.category}
                     </span>
                   )}
                 </div>
 
-                <div className="space-y-2 mb-3">
-                  <div className="relative h-9 bg-white/5 rounded overflow-hidden flex items-center">
+                {/* YES/NO bars */}
+                <div className="space-y-2 mb-4">
+                  <div className="relative h-8 bg-white/[0.04] rounded-lg overflow-hidden border border-white/[0.04]">
                     <div
-                      className="absolute left-0 top-0 bottom-0 bg-green-500/20"
+                      className="absolute left-0 top-0 bottom-0 bg-emerald-500/20 transition-all duration-500"
                       style={{ width: `${market.yesPrice * 100}%` }}
                     />
-                    <div className="relative flex justify-between w-full px-3 z-10 text-sm">
-                      <span className="font-semibold text-green-400">YES</span>
-                      <span className="font-mono text-white">{(market.yesPrice * 100).toFixed(1)}%</span>
+                    <div className="relative flex justify-between w-full h-full px-3 items-center z-10">
+                      <span className="text-[11px] font-semibold font-mono text-emerald-400">YES</span>
+                      <span className="text-[12px] font-mono font-600 text-white">{(market.yesPrice * 100).toFixed(1)}%</span>
                     </div>
                   </div>
 
-                  <div className="relative h-9 bg-white/5 rounded overflow-hidden flex items-center">
+                  <div className="relative h-8 bg-white/[0.04] rounded-lg overflow-hidden border border-white/[0.04]">
                     <div
-                      className="absolute left-0 top-0 bottom-0 bg-red-500/20"
+                      className="absolute left-0 top-0 bottom-0 bg-red-500/20 transition-all duration-500"
                       style={{ width: `${market.noPrice * 100}%` }}
                     />
-                    <div className="relative flex justify-between w-full px-3 z-10 text-sm">
-                      <span className="font-semibold text-red-400">NO</span>
-                      <span className="font-mono text-white">{(market.noPrice * 100).toFixed(1)}%</span>
+                    <div className="relative flex justify-between w-full h-full px-3 items-center z-10">
+                      <span className="text-[11px] font-semibold font-mono text-red-400">NO</span>
+                      <span className="text-[12px] font-mono font-600 text-white">{(market.noPrice * 100).toFixed(1)}%</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-white/5 pt-2.5">
-                  <div className="flex items-center gap-1">
+                <div className="flex items-center justify-between border-t border-white/[0.05] pt-3">
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
                     <BarChart2 className="w-3 h-3" />
-                    ${(market.volume || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    <span>${(market.volume || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} vol</span>
                   </div>
                   {market.endDate && (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
                       <CalendarDays className="w-3 h-3" />
                       {format(new Date(market.endDate), "MMM d, yyyy")}
                     </div>

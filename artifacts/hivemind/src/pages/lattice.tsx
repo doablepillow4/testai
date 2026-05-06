@@ -14,14 +14,14 @@ const SYMBOLS = ["BTC", "ETH", "SOL", "BNB", "NVDA", "TSLA", "AAPL", "MSFT", "AM
 
 const AGENT_LABELS: Record<string, string> = {
   hive_polymarket: "Hive (Polymarket)",
-  hypothesis_momentum: "Momentum Agent",
-  hypothesis_meanrevert: "Mean Reversion Agent",
-  hypothesis_volregime: "Vol-Regime Agent",
-  hypothesis_hive: "Hive Wisdom Agent",
+  hypothesis_momentum: "Momentum",
+  hypothesis_meanrevert: "Mean Reversion",
+  hypothesis_volregime: "Vol-Regime",
+  hypothesis_hive: "Hive Wisdom",
   critique_devil: "Devil's Advocate",
-  critique_tailrisk: "Tail Risk Agent",
-  synthesis: "Synthesis Agent",
-  meta: "Meta Agent",
+  critique_tailrisk: "Tail Risk",
+  synthesis: "Synthesis",
+  meta: "Meta",
 };
 
 const AGENT_COLORS: Record<string, string> = {
@@ -33,61 +33,74 @@ const AGENT_COLORS: Record<string, string> = {
   critique_devil: "text-orange-400",
   critique_tailrisk: "text-red-400",
   synthesis: "text-primary",
-  meta: "text-yellow-400",
+  meta: "text-amber-400",
+};
+
+const AGENT_BG: Record<string, string> = {
+  hive_polymarket: "bg-purple-500/10",
+  hypothesis_momentum: "bg-blue-500/10",
+  hypothesis_meanrevert: "bg-cyan-500/10",
+  hypothesis_volregime: "bg-indigo-500/10",
+  hypothesis_hive: "bg-violet-500/10",
+  critique_devil: "bg-orange-500/10",
+  critique_tailrisk: "bg-red-500/10",
+  synthesis: "bg-primary/10",
+  meta: "bg-amber-500/10",
 };
 
 function RegimeBadge({ regime, score }: { regime: string; score: number }) {
   const colors = {
-    calm: "bg-green-500/15 text-green-400 border-green-500/30",
-    volatile: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
-    crisis: "bg-red-500/15 text-red-400 border-red-500/30",
+    calm: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25",
+    volatile: "bg-amber-500/10 text-amber-400 border-amber-500/25",
+    crisis: "bg-red-500/10 text-red-400 border-red-500/25",
   }[regime] ?? "bg-white/5 text-white border-white/10";
   return (
-    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${colors} uppercase tracking-widest`}>
+    <span className={`text-[9px] font-mono font-semibold px-2.5 py-1 rounded-full border ${colors} uppercase tracking-widest`}>
       {regime} · {(score * 100).toFixed(0)}
     </span>
   );
 }
 
 function DirectionIcon({ dir }: { dir: string }) {
-  if (dir === "bullish") return <TrendingUp className="w-4 h-4 text-green-400" />;
-  if (dir === "bearish") return <TrendingDown className="w-4 h-4 text-red-400" />;
-  return <Minus className="w-4 h-4 text-yellow-400" />;
+  if (dir === "bullish") return <TrendingUp className="w-5 h-5 text-emerald-400" />;
+  if (dir === "bearish") return <TrendingDown className="w-5 h-5 text-red-400" />;
+  return <Minus className="w-5 h-5 text-amber-400" />;
 }
 
 function HivemindGauge({ score }: { score: number }) {
-  const color = score >= 65 ? "#4ade80" : score >= 40 ? "#f59e0b" : "#f87171";
+  const color = score >= 65 ? "#34d399" : score >= 40 ? "#f59e0b" : "#f87171";
   const pct = score / 100;
   const circ = 2 * Math.PI * 36;
   const dash = circ * pct;
   return (
-    <div className="flex flex-col items-center gap-1">
-      <svg width="96" height="96" viewBox="0 0 96 96">
-        <circle cx="48" cy="48" r="36" fill="none" stroke="#ffffff10" strokeWidth="8" />
+    <div className="flex flex-col items-center gap-1.5">
+      <svg width="88" height="88" viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r="36" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="7" />
         <circle
           cx="48" cy="48" r="36" fill="none"
-          stroke={color} strokeWidth="8"
+          stroke={color} strokeWidth="7"
           strokeDasharray={`${dash} ${circ - dash}`}
           strokeLinecap="round"
           transform="rotate(-90 48 48)"
+          style={{ filter: `drop-shadow(0 0 6px ${color}70)` }}
         />
-        <text x="48" y="52" textAnchor="middle" fontSize="20" fontWeight="bold" fill="white" fontFamily="monospace">
+        <text x="48" y="53" textAnchor="middle" fontSize="18" fontWeight="700" fill="white" fontFamily="JetBrains Mono">
           {score.toFixed(0)}
         </text>
       </svg>
-      <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Hivemind Score</span>
+      <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">HPL Score</span>
     </div>
   );
 }
 
 function ShapBar({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-[11px]">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="text-white font-mono">{(value * 100).toFixed(0)}%</span>
+    <div className="space-y-1.5">
+      <div className="flex justify-between">
+        <span className="text-[11px] text-muted-foreground">{label}</span>
+        <span className="text-[11px] font-mono text-white">{(value * 100).toFixed(0)}%</span>
       </div>
-      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${value * 100}%` }} />
       </div>
     </div>
@@ -98,27 +111,28 @@ function TokenCard({ token }: { token: BeliefToken }) {
   const [open, setOpen] = useState(false);
   const label = AGENT_LABELS[token.agentType] ?? token.agentType;
   const colorClass = AGENT_COLORS[token.agentType] ?? "text-white";
+  const bgClass = AGENT_BG[token.agentType] ?? "bg-white/5";
   const dir = token.hypothesis;
-  const dirColor = dir === "bullish" ? "text-green-400" : dir === "bearish" ? "text-red-400" : "text-yellow-400";
+  const dirColor = dir === "bullish" ? "text-emerald-400" : dir === "bearish" ? "text-red-400" : "text-amber-400";
 
   return (
-    <div className="bg-black/20 rounded border border-white/5 p-3">
+    <div className="bg-black/20 rounded-lg border border-white/[0.05] overflow-hidden">
       <button
-        className="w-full flex items-center justify-between gap-2"
+        className="w-full flex items-center justify-between gap-2 p-3 hover:bg-white/[0.02] transition-colors"
         onClick={() => setOpen((o) => !o)}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <span className={`text-[11px] font-semibold ${colorClass} shrink-0`}>R{token.round}</span>
+          <span className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded ${bgClass} ${colorClass} shrink-0`}>R{token.round}</span>
           <span className="text-[11px] text-white truncate">{label}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className={`text-[11px] font-mono ${dirColor}`}>{(token.probability * 100).toFixed(0)}%</span>
-          <span className={`text-[10px] uppercase ${dirColor}`}>{dir}</span>
+          <span className={`text-[11px] font-mono font-600 ${dirColor}`}>{(token.probability * 100).toFixed(0)}%</span>
+          <span className={`text-[9px] font-mono uppercase tracking-widest ${dirColor}`}>{dir}</span>
           {open ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
         </div>
       </button>
       {open && (
-        <div className="mt-2 pt-2 border-t border-white/5 space-y-1">
+        <div className="px-3 pb-3 pt-0 border-t border-white/[0.05] space-y-1.5">
           {token.rationale.map((r, i) => (
             <p key={i} className="text-[11px] text-muted-foreground leading-relaxed">{r}</p>
           ))}
@@ -132,36 +146,37 @@ function LatticeResultView({ result }: { result: LatticeResult }) {
   const [showTokens, setShowTokens] = useState(false);
   const { finalPrediction, shap, debateRounds, causalNarrative, minorityReport, agentConsensus, tokens, regime, regimeScore } = result;
 
-  const priceChange = (
-    (finalPrediction.direction === "bullish" ? 1 : finalPrediction.direction === "bearish" ? -1 : 0) *
-    Math.abs(finalPrediction.targetPrice - (tokens.find(t => t.agentType === "meta")?.probability ?? 0.5)) /
-    finalPrediction.targetPrice * 100
-  );
+  const directionColor = finalPrediction.direction === "bullish"
+    ? "text-emerald-400"
+    : finalPrediction.direction === "bearish"
+    ? "text-red-400"
+    : "text-amber-400";
 
   return (
     <div className="space-y-4">
-      {/* Main result card */}
-      <Card className="bg-card/50 border-white/5">
+      {/* Main result */}
+      <Card className="bg-card/60 border-white/[0.07] backdrop-blur-sm overflow-hidden">
+        <div className={`h-0.5 w-full ${finalPrediction.direction === "bullish" ? "bg-gradient-to-r from-emerald-500/50 to-transparent" : finalPrediction.direction === "bearish" ? "bg-gradient-to-r from-red-500/50 to-transparent" : "bg-gradient-to-r from-amber-500/50 to-transparent"}`} />
         <CardContent className="p-4">
           <div className="flex items-start justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <RegimeBadge regime={regime} score={regimeScore} />
-              </div>
-              <div className="flex items-center gap-2 mt-2">
+            <div className="space-y-2">
+              <RegimeBadge regime={regime} score={regimeScore} />
+              <div className="flex items-center gap-2">
                 <DirectionIcon dir={finalPrediction.direction} />
-                <span className={`text-lg font-bold ${finalPrediction.direction === "bullish" ? "text-green-400" : finalPrediction.direction === "bearish" ? "text-red-400" : "text-yellow-400"}`}>
+                <span className={`font-display text-2xl font-800 ${directionColor}`}>
                   {finalPrediction.direction.toUpperCase()}
                 </span>
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                Target: <span className="text-white font-mono">${finalPrediction.targetPrice.toFixed(2)}</span>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Confidence: <span className="text-white font-mono">{(finalPrediction.confidence * 100).toFixed(0)}%</span>
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                Agent consensus: <span className="text-primary font-mono">{(agentConsensus * 100).toFixed(0)}%</span>
+              <div className="space-y-0.5">
+                <div className="text-[11px] font-mono text-muted-foreground">
+                  Target: <span className="text-white font-600">${finalPrediction.targetPrice.toFixed(2)}</span>
+                </div>
+                <div className="text-[11px] font-mono text-muted-foreground">
+                  Confidence: <span className="text-white font-600">{(finalPrediction.confidence * 100).toFixed(0)}%</span>
+                </div>
+                <div className="text-[11px] font-mono text-muted-foreground">
+                  Consensus: <span className="text-primary font-600">{(agentConsensus * 100).toFixed(0)}%</span>
+                </div>
               </div>
             </div>
             <HivemindGauge score={finalPrediction.hivemindScore} />
@@ -170,9 +185,9 @@ function LatticeResultView({ result }: { result: LatticeResult }) {
       </Card>
 
       {/* SHAP Attribution */}
-      <Card className="bg-card/50 border-white/5">
+      <Card className="bg-card/60 border-white/[0.07] backdrop-blur-sm">
         <CardContent className="p-4 space-y-3">
-          <div className="text-xs font-semibold text-white mb-2">Signal Attribution (SHAP)</div>
+          <div className="data-label mb-1">Signal Attribution (SHAP)</div>
           <ShapBar label="🐝 Hive (Polymarket)" value={shap.hive} color="bg-purple-500" />
           <ShapBar label="🤖 AI Ensemble" value={shap.ai} color="bg-primary" />
           <ShapBar label="🌍 Geopolitical" value={shap.geo} color="bg-orange-500" />
@@ -181,39 +196,33 @@ function LatticeResultView({ result }: { result: LatticeResult }) {
 
       {/* Minority Report */}
       {minorityReport && (
-        <Card className="bg-orange-500/5 border-orange-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-xs font-semibold text-orange-400 mb-1">Minority Report</div>
-                <p className="text-[11px] text-orange-200 leading-relaxed">{minorityReport}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
+          <div>
+            <div className="text-[10px] font-semibold text-orange-400 mb-1 tracking-widest uppercase">Minority Report</div>
+            <p className="text-[11px] text-orange-200/80 leading-relaxed">{minorityReport}</p>
+          </div>
+        </div>
       )}
 
       {/* Debate Rounds */}
-      <Card className="bg-card/50 border-white/5">
+      <Card className="bg-card/60 border-white/[0.07] backdrop-blur-sm">
         <CardContent className="p-4">
-          <div className="text-xs font-semibold text-white mb-3">Debate Rounds</div>
+          <div className="data-label mb-3">Debate Rounds</div>
           <div className="space-y-3">
             {debateRounds.map((round, i) => (
               <div key={i} className="border-l-2 border-white/10 pl-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className={`text-[11px] font-medium ${AGENT_COLORS[round.agentType] ?? "text-white"}`}>
-                    Round {round.round} — {AGENT_LABELS[round.agentType] ?? round.agentType}
+                  <span className={`text-[11px] font-semibold ${AGENT_COLORS[round.agentType] ?? "text-white"}`}>
+                    R{round.round} — {AGENT_LABELS[round.agentType] ?? round.agentType}
                   </span>
-                  <div className="flex items-center gap-1">
-                    <span className={`text-[10px] font-mono ${round.adjustment < 0 ? "text-red-400" : "text-green-400"}`}>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] font-mono ${round.adjustment < 0 ? "text-red-400" : "text-emerald-400"}`}>
                       {round.adjustment >= 0 ? "+" : ""}{(round.adjustment * 100).toFixed(1)}%
                     </span>
-                    {round.accepted ? (
-                      <span className="text-[9px] bg-red-500/10 text-red-400 px-1 rounded">ACCEPTED</span>
-                    ) : (
-                      <span className="text-[9px] bg-white/5 text-muted-foreground px-1 rounded">REJECTED</span>
-                    )}
+                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded tracking-widest ${round.accepted ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-muted-foreground"}`}>
+                      {round.accepted ? "ACCEPTED" : "REJECTED"}
+                    </span>
                   </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">{round.challenge}</p>
@@ -224,12 +233,16 @@ function LatticeResultView({ result }: { result: LatticeResult }) {
       </Card>
 
       {/* Causal Narrative */}
-      <Card className="bg-card/50 border-white/5">
+      <Card className="bg-card/60 border-white/[0.07] backdrop-blur-sm">
         <CardContent className="p-4">
-          <div className="text-xs font-semibold text-white mb-2">Causal Narrative</div>
-          <div className="space-y-2">
+          <div className="data-label mb-3">Causal Narrative</div>
+          <div className="space-y-1.5">
             {causalNarrative.split("\n").filter(l => l.trim()).map((line, i) => (
-              <p key={i} className={`text-[11px] leading-relaxed ${line.startsWith("HPL") ? "text-primary font-medium" : line.startsWith("Market Regime") || line.startsWith("Signal") || line.startsWith("Price Target") ? "text-white font-medium" : "text-muted-foreground"}`}>
+              <p key={i} className={`text-[11px] leading-relaxed font-mono ${
+                line.startsWith("HPL") ? "text-primary font-medium" :
+                line.startsWith("Market Regime") || line.startsWith("Signal") || line.startsWith("Price Target")
+                  ? "text-white/80 font-medium" : "text-muted-foreground"
+              }`}>
                 {line}
               </p>
             ))}
@@ -238,13 +251,13 @@ function LatticeResultView({ result }: { result: LatticeResult }) {
       </Card>
 
       {/* Belief Token DAG */}
-      <Card className="bg-card/50 border-white/5">
+      <Card className="bg-card/60 border-white/[0.07] backdrop-blur-sm">
         <CardContent className="p-4">
           <button
-            className="w-full flex items-center justify-between"
+            className="w-full flex items-center justify-between hover:opacity-80 transition-opacity"
             onClick={() => setShowTokens(o => !o)}
           >
-            <div className="text-xs font-semibold text-white">Belief Token DAG ({tokens.length} nodes)</div>
+            <div className="data-label">Belief Token DAG ({tokens.length} nodes)</div>
             {showTokens ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
           </button>
           {showTokens && (
@@ -272,43 +285,43 @@ export default function Lattice() {
   const agentList = Array.isArray(agents) ? agents : [];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 animate-fade-up">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Predictive Lattice</h1>
-        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+        <h1 className="font-display text-[22px] font-700 text-white tracking-tight leading-none">Predictive Lattice</h1>
+        <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1.5 font-mono">
           <Network className="w-3 h-3 text-primary" />
           HPL-HPA v2 · Multi-agent intelligence engine
         </p>
       </div>
 
       {/* Run controls */}
-      <Card className="bg-card/50 border-white/5">
-        <CardContent className="p-4 space-y-3">
-          <div className="text-xs font-semibold text-white">Configure Lattice Run</div>
+      <Card className="bg-card/60 border-white/[0.07] backdrop-blur-sm">
+        <CardContent className="p-4 space-y-4">
+          <div className="data-label">Configure Lattice Run</div>
           <div className="flex gap-2">
             <Select value={symbol} onValueChange={setSymbol}>
-              <SelectTrigger className="flex-1 bg-background border-white/10 h-9 text-sm">
+              <SelectTrigger className="flex-1 bg-black/30 border-white/10 h-9 text-sm font-mono">
                 <SelectValue placeholder="Symbol" />
               </SelectTrigger>
               <SelectContent>
                 {SYMBOLS.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s} className="font-mono">{s}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={timeframe} onValueChange={setTimeframe}>
-              <SelectTrigger className="w-24 bg-background border-white/10 h-9 text-sm">
+              <SelectTrigger className="w-24 bg-black/30 border-white/10 h-9 text-sm font-mono">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1d">1 Day</SelectItem>
-                <SelectItem value="7d">7 Days</SelectItem>
-                <SelectItem value="30d">30 Days</SelectItem>
+                <SelectItem value="1d" className="font-mono">1D</SelectItem>
+                <SelectItem value="7d" className="font-mono">7D</SelectItem>
+                <SelectItem value="30d" className="font-mono">30D</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <Button
-            className="w-full gap-2"
+            className="w-full gap-2 font-mono"
             onClick={() => { if (symbol) runLattice.mutate({ data: { symbol, timeframe } }); }}
             disabled={!symbol || runLattice.isPending}
           >
@@ -330,26 +343,32 @@ export default function Lattice() {
       {/* Results */}
       {result && <LatticeResultView result={result} />}
 
-      {/* Agent reputation panel */}
+      {/* Agent reputation */}
       {agentList.length > 0 && (
-        <Card className="bg-card/50 border-white/5">
+        <Card className="bg-card/60 border-white/[0.07] backdrop-blur-sm">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-4">
               <Shield className="w-3.5 h-3.5 text-primary" />
-              <div className="text-xs font-semibold text-white">Agent Reputation</div>
+              <div className="data-label">Agent Reputation</div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {agentList.map((agent) => (
-                <div key={agent.agentId} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 min-w-0">
+                <div key={agent.agentId} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <Activity className={`w-3 h-3 shrink-0 ${AGENT_COLORS[agent.agentType] ?? "text-white"}`} />
                     <span className="text-[11px] text-muted-foreground truncate">
                       {AGENT_LABELS[agent.agentType] ?? agent.agentType}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[11px] font-mono text-white">{agent.reputation.toFixed(2)}</span>
-                    <span className="text-[10px] text-muted-foreground">
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="w-16 h-1 bg-white/[0.05] rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${AGENT_BG[agent.agentType] ?? "bg-white/20"}`}
+                        style={{ width: `${Math.min(100, agent.reputation * 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-[11px] font-mono text-white w-8 text-right">{agent.reputation.toFixed(2)}</span>
+                    <span className="text-[10px] font-mono text-muted-foreground w-10 text-right">
                       {agent.totalRuns > 0 ? `${agent.correctRuns}/${agent.totalRuns}` : "—"}
                     </span>
                   </div>
