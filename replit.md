@@ -59,7 +59,7 @@ scripts/        post-merge.sh (runs pnpm install + db push)
 - **Lattice** — multi-agent debate engine that generates buy/sell/hold predictions with confidence scores, SHAP attribution, and causal narratives
 - **HPL-HPA v3** — persistent belief state machine (opt-in via `useV3: true`); tracks delta, momentum, acceleration, and stability across runs per symbol; stored in `belief_states` (latest) + `belief_history` (append-only log)
 - **Simulator** — portfolio scenario simulation tool
-- **Geopolitics** — dedicated geopolitical events and market impact view
+- **Geopolitics** — emerging threat radar (auto-classifies and ranks breaking news by emergence score), long-term market impact analysis per threat (pandemic, conflict, nuclear, energy, financial, cyber, climate, supply chain), Polymarket odds matched to news with expanded keyword taxonomy (including health/pandemic), Global Risk Barometer with pandemic signal indicator
 - **Auto-resolution** — expired predictions are resolved against real prices on a 15-minute schedule; agent Brier scores and reputation update automatically
 
 ### Key API endpoints
@@ -70,6 +70,7 @@ scripts/        post-merge.sh (runs pnpm install + db push)
 | `POST` | `/api/lattice/train`                  | Manually trigger a training cycle (same logic as the scheduler)        |
 | `GET`  | `/api/lattice/belief-history/:symbol` | `?limit=N` (default 50, max 200) — chronological conviction history    |
 | `GET`  | `/api/healthz`                        | Returns `{ status, db, uptime, timestamp, scheduler }`                 |
+| `POST` | `/api/geo-impact`                     | `{ headline, description?, isBreaking? }` — returns full `ThreatClassification` (type, severity, lockdownRisk, economicDisruptionRisk, marketImpactScore, timeHorizon, affectedTickers, narrative) |
 
 ## User preferences
 

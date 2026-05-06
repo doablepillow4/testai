@@ -81,7 +81,15 @@ function scoreSentiment(text: string): {
 
 function classifyCategory(text: string): string {
   const t = text.toLowerCase();
-  if (/war|conflict|attack|military|troops|missile|bomb|nuclear|weapon|drone|soldier/.test(t))
+  if (
+    /hantavirus|mpox|monkeypox|ebola|sars|mers|pandemic|epidemic|outbreak|novel virus|new strain|pathogen|contagion|quarantine|virus spread|health emergency|disease spread|WHO declares|CDC alert|infectious disease|bird flu|avian flu/.test(
+      t,
+    )
+  )
+    return "pandemic";
+  if (/hospital|patient|health|medical|vaccine|vaccination|treatment|drug approval|clinical trial/.test(t))
+    return "health";
+  if (/war|conflict|attack|military|troops|missile|bomb|nuclear|weapon|drone|soldier|airstrike/.test(t))
     return "conflict";
   if (/election|president|prime minister|government|congress|parliament|vote|senator/.test(t))
     return "politics";

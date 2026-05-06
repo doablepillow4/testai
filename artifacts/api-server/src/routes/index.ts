@@ -6,6 +6,7 @@ import simulatorRouter from "./simulator";
 import polymarketRouter from "./polymarket";
 import latticeRouter from "./lattice";
 import newsRouter from "./news";
+import geoImpactRouter from "./geo-impact";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(simulatorRouter);
 router.use(polymarketRouter);
 router.use(latticeRouter);
 router.use(newsRouter);
+router.use(geoImpactRouter);
 
 export default router;
