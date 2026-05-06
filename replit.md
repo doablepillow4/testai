@@ -54,7 +54,7 @@ A premium dark-themed predictive analytics web app with live market prices, AI c
 
 ## User preferences
 
-_Populate as you build._
+- Repo-friendly: README.md, CONTRIBUTING.md, LICENSE (MIT), .env.example, .github/ templates all present
 
 ## Gotchas
 
