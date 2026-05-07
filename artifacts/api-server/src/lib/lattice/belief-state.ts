@@ -25,7 +25,6 @@ export async function loadBeliefState(symbol: string): Promise<BeliefState | nul
       hivemindScore: r.hivemindScore,
       regime: r.regime as Regime,
       momentum: r.momentum,
-      acceleration: r.acceleration,
       deltaHistory: JSON.parse(r.deltaHistory) as number[],
       sessionCount: r.sessionCount,
     };
@@ -46,7 +45,6 @@ export async function saveBeliefState(state: BeliefState): Promise<void> {
       hivemindScore: parseFloat(state.hivemindScore.toFixed(4)),
       regime: state.regime,
       momentum: parseFloat(state.momentum.toFixed(6)),
-      acceleration: parseFloat(state.acceleration.toFixed(6)),
       deltaHistory: JSON.stringify(state.deltaHistory.slice(-10)),
       sessionCount: state.sessionCount,
       updatedAt: new Date(),
@@ -89,8 +87,6 @@ export async function appendBeliefHistory(opts: {
       regime: opts.regime,
       delta: parseFloat(opts.dynamics.delta.toFixed(6)),
       momentum: parseFloat(opts.dynamics.momentum.toFixed(6)),
-      acceleration: parseFloat(opts.dynamics.acceleration.toFixed(6)),
-      stability: parseFloat(opts.dynamics.stability.toFixed(4)),
       convictionShift: opts.dynamics.convictionShift,
       previousRunId: opts.dynamics.previousRunId ?? null,
       createdAt: new Date(),
@@ -133,8 +129,6 @@ export async function queryBeliefHistory(
     regime: r.regime as Regime,
     delta: r.delta,
     momentum: r.momentum,
-    acceleration: r.acceleration,
-    stability: r.stability,
     convictionShift: r.convictionShift as BeliefDynamics["convictionShift"],
     previousRunId: r.previousRunId ?? null,
     previousDirection: null,
@@ -174,15 +168,6 @@ export function computeBeliefDynamics(opts: {
     (deltaHistory.reduce((s, d) => s + d, 0) / deltaHistory.length).toFixed(6),
   );
 
-  const prevMomentum = prev?.momentum ?? 0;
-  const acceleration = parseFloat((momentum - prevMomentum).toFixed(6));
-
-  // Stability = 1 – normalised std-dev of recent deltas (0 = chaotic, 1 = rock-solid)
-  const meanDelta = deltaHistory.reduce((s, d) => s + d, 0) / deltaHistory.length;
-  const variance =
-    deltaHistory.reduce((s, d) => s + Math.pow(d - meanDelta, 2), 0) / deltaHistory.length;
-  const stability = parseFloat(Math.max(0, 1 - Math.min(1, Math.sqrt(variance) * 15)).toFixed(4));
-
   let convictionShift: BeliefDynamics["convictionShift"] = "stable";
   if (prev) {
     const prevDir = prev.finalDirection;
@@ -206,8 +191,6 @@ export function computeBeliefDynamics(opts: {
   const dynamics: BeliefDynamics = {
     delta,
     momentum,
-    acceleration,
-    stability,
     convictionShift,
     previousRunId: prev?.runId ?? null,
     previousDirection: prev?.finalDirection ?? null,
@@ -223,7 +206,6 @@ export function computeBeliefDynamics(opts: {
     hivemindScore,
     regime,
     momentum,
-    acceleration,
     deltaHistory,
     sessionCount: (prev?.sessionCount ?? 0) + 1,
   };
@@ -242,7 +224,5 @@ export function enrichTokensWithDeltas(
       token.delta = parseFloat((token.probability - prevProb).toFixed(6));
     }
     token.momentum = dynamics.momentum;
-    token.acceleration = dynamics.acceleration;
-    token.stability = dynamics.stability;
   }
 }

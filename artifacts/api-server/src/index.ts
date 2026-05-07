@@ -2,10 +2,11 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { startScheduler, stopScheduler } from "./lib/scheduler";
 
-const rawPort = process.env["PORT"];
+let rawPort = process.env["PORT"];
 
 if (!rawPort) {
-  throw new Error("PORT environment variable is required but was not provided.");
+  logger.warn("PORT environment variable is missing, defaulting to 8080");
+  rawPort = "8080";
 }
 
 const port = Number(rawPort);

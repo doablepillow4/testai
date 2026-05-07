@@ -58,7 +58,7 @@ export const polymarketCache = new TTLCache(50);
 export const fearGreedCache = new TTLCache(10);
 
 export const TTL = {
-  MARKET_PRICE: 2 * 60 * 1000,
+  MARKET_PRICE: 5 * 60 * 1000,
   MARKET_HISTORY: 5 * 60 * 1000,
   LATTICE_RUN: 5 * 60 * 1000,
   POLYMARKET: 5 * 60 * 1000,

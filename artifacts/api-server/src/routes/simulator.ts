@@ -13,7 +13,7 @@ router.post("/simulator/monte-carlo", async (req, res): Promise<void> => {
     return;
   }
 
-  const {
+  let {
     symbol,
     currentPrice,
     volatility,
@@ -21,6 +21,8 @@ router.post("/simulator/monte-carlo", async (req, res): Promise<void> => {
     timeHorizon,
     simulations = 1000,
   } = parsed.data;
+
+  simulations = Math.min(simulations, 2000);
 
   const dt = 1 / 252;
   const drift = 0;

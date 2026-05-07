@@ -993,7 +993,6 @@ function ConvictionMomentumChart({
     probability: parseFloat(h.finalProbability.toFixed(3)),
     delta: parseFloat(h.delta.toFixed(4)),
     momentum: parseFloat(h.momentum.toFixed(4)),
-    stability: parseFloat(h.stability.toFixed(3)),
     direction: h.finalDirection,
     shift: h.convictionShift,
   }));
@@ -1177,26 +1176,7 @@ function ConvictionMomentumChart({
           </div>
         </div>
 
-        {/* Stability bar */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">
-              Belief Stability
-            </span>
-            <span className="text-[10px] font-mono text-white">
-              {(latest.stability * 100).toFixed(0)}%
-            </span>
-          </div>
-          <div className="h-1 bg-white/[0.05] rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-500"
-              style={{
-                width: `${latest.stability * 100}%`,
-                boxShadow: "0 0 6px rgba(0,212,255,0.5)",
-              }}
-            />
-          </div>
-        </div>
+
 
         {/* Metrics grid */}
         <div className="grid grid-cols-4 gap-2">
@@ -1218,16 +1198,6 @@ function ConvictionMomentumChart({
                 latest.momentum > 0
                   ? "text-emerald-400"
                   : latest.momentum < 0
-                    ? "text-red-400"
-                    : "text-muted-foreground",
-            },
-            {
-              label: "Accel",
-              value: `${latest.acceleration >= 0 ? "+" : ""}${(latest.acceleration * 100).toFixed(1)}%`,
-              color:
-                latest.acceleration > 0
-                  ? "text-emerald-400"
-                  : latest.acceleration < 0
                     ? "text-red-400"
                     : "text-muted-foreground",
             },

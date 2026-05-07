@@ -190,8 +190,6 @@ function buildNarrative(p: NarrativeParams): string {
     const d = p.beliefDynamics;
     const deltaSign = d.delta >= 0 ? "+" : "";
     const momSign = d.momentum >= 0 ? "+" : "";
-    const accSign = d.acceleration >= 0 ? "+" : "";
-
     const shiftDesc: Record<typeof d.convictionShift, string> = {
       strengthening: "conviction is STRENGTHENING — the lattice is growing more certain",
       weakening: "conviction is WEAKENING — uncertainty is increasing",
@@ -213,9 +211,6 @@ function buildNarrative(p: NarrativeParams): string {
       );
       lines.push(
         `Momentum: ${momSign}${(d.momentum * 100).toFixed(2)}% rolling avg — ${shiftDesc[d.convictionShift]}.`,
-      );
-      lines.push(
-        `Acceleration: ${accSign}${(d.acceleration * 100).toFixed(2)}% (Δ momentum). Stability score: ${(d.stability * 100).toFixed(0)}/100.`,
       );
     }
   }

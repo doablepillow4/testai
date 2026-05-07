@@ -42,8 +42,7 @@ export const beliefHistoryTable = pgTable(
     regime: text("regime").notNull(),
     delta: real("delta").notNull().default(0),
     momentum: real("momentum").notNull().default(0),
-    acceleration: real("acceleration").notNull().default(0),
-    stability: real("stability").notNull().default(1),
+
     convictionShift: text("conviction_shift").notNull().default("stable"),
     previousRunId: text("previous_run_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -60,7 +59,7 @@ export const beliefStatesTable = pgTable("belief_states", {
   hivemindScore: real("hivemind_score").notNull(),
   regime: text("regime").notNull(),
   momentum: real("momentum").notNull().default(0),
-  acceleration: real("acceleration").notNull().default(0),
+
   deltaHistory: text("delta_history").notNull().default("[]"),
   sessionCount: integer("session_count").notNull().default(1),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

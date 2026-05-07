@@ -28,8 +28,7 @@ export interface BeliefToken {
   // v3 delta fields — optional for full backward compatibility
   delta?: number;
   momentum?: number;
-  acceleration?: number;
-  stability?: number;
+
   previousTokenId?: string;
 }
 
@@ -136,8 +135,6 @@ export interface BeliefState {
   regime: Regime;
   /** Exponential moving average of recent probability deltas */
   momentum: number;
-  /** Change in momentum (second derivative of probability) */
-  acceleration: number;
   /** Last N probability deltas (most recent last) */
   deltaHistory: number[];
   sessionCount: number;
@@ -152,10 +149,7 @@ export interface BeliefDynamics {
   delta: number;
   /** Rolling average of deltaHistory */
   momentum: number;
-  /** momentum - previousMomentum */
-  acceleration: number;
-  /** 0–1: how stable conviction has been across recent runs */
-  stability: number;
+
   convictionShift: "strengthening" | "weakening" | "reversing" | "stable";
   previousRunId: string | null;
   previousDirection: Direction | null;

@@ -386,8 +386,6 @@ export interface BeliefHistoryItem {
   regime: string;
   delta: number;
   momentum: number;
-  acceleration: number;
-  stability: number;
   convictionShift: BeliefHistoryItemConvictionShift;
   previousRunId?: string | null;
   createdAt: string;

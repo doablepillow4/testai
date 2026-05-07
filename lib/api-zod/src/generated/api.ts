@@ -293,8 +293,6 @@ export const RunLatticeResponse = zod.object({
       // v3 delta fields
       delta: zod.number().optional(),
       momentum: zod.number().optional(),
-      acceleration: zod.number().optional(),
-      stability: zod.number().optional(),
       previousTokenId: zod.string().optional(),
     }),
   ),
@@ -341,8 +339,6 @@ export const RunLatticeResponse = zod.object({
     .object({
       delta: zod.number(),
       momentum: zod.number(),
-      acceleration: zod.number(),
-      stability: zod.number(),
       convictionShift: zod.enum(["strengthening", "weakening", "reversing", "stable"]),
       previousRunId: zod.string().nullish(),
       previousDirection: zod.enum(["bullish", "bearish", "neutral"]).nullish(),
@@ -374,8 +370,6 @@ export const GetBeliefHistoryResponseItem = zod.object({
   regime: zod.enum(["calm", "volatile", "crisis"]),
   delta: zod.number(),
   momentum: zod.number(),
-  acceleration: zod.number(),
-  stability: zod.number(),
   convictionShift: zod.enum(["strengthening", "weakening", "reversing", "stable"]),
   previousRunId: zod.string().nullish(),
   createdAt: zod.string(),

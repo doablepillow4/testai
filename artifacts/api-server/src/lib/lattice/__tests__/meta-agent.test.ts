@@ -177,8 +177,6 @@ describe("runMetaAgent()", () => {
     const beliefDynamics = {
       delta: 0.05,
       momentum: 0.03,
-      acceleration: 0.01,
-      stability: 0.8,
       convictionShift: "strengthening" as const,
       previousRunId: "prev-run-1",
       previousDirection: "bullish" as const,
