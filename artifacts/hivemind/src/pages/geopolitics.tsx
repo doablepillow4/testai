@@ -536,7 +536,7 @@ export default function Geopolitics() {
   });
 
   const filteredNews = useMemo(() => {
-    const items = Array.isArray(newsData) ? newsData : [];
+    const items = Array.isArray(newsData) && newsData.length > 0 ? newsData : PLACEHOLDER_NEWS;
     if (selectedRegion === "all") return items;
     const cfg = REGION_CONFIG[selectedRegion];
     return items.filter((item) => {
@@ -546,7 +546,7 @@ export default function Geopolitics() {
   }, [newsData, selectedRegion]);
 
   const marketByRegion = useMemo(() => {
-    const mks = Array.isArray(polymarketData) ? polymarketData : [];
+    const mks = Array.isArray(polymarketData) && polymarketData.length > 0 ? polymarketData : PLACEHOLDER_MARKETS;
     const groups: Record<string, PolymarketMarket[]> = {
       americas: [],
       europe: [],
@@ -560,7 +560,7 @@ export default function Geopolitics() {
     });
     return groups;
   }, [polymarketData]);
-  const markets = Array.isArray(polymarketData) ? polymarketData : [];
+  const markets = Array.isArray(polymarketData) && polymarketData.length > 0 ? polymarketData : PLACEHOLDER_MARKETS;
 
   async function handleExpand(item: NewsItem) {
     if (expandedNews === item.id) {

@@ -110,7 +110,7 @@ export default function Dashboard() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>(selectedAsset?.symbol ?? "");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1d");
 
-  const priceList = Array.isArray(prices) ? prices : [];
+  const priceList = Array.isArray(prices) && prices.length > 0 ? prices : PLACEHOLDER_PRICES;
   const predictionList = Array.isArray(predictions) ? predictions : [];
   const hasApiErrors = Boolean(pricesError || predictionsError || summaryError);
 
