@@ -203,13 +203,14 @@ export async function fetchGeopoliticsNews(): Promise<NewsItem[]> {
 
   all.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 
-  // Ensure we always have at least some news, even if all feeds fail
-  const items = all.length > 0 ? all.slice(0, 30) : getFallbackNews();
+  if (all.length === 0) {
+    logger.error("All news feeds failed — returning empty news list");
+    return [];
+  }
 
-  // Simple deduplication based on title
-  const uniqueItems = [];
-  const seenTitles = new Set();
-  for (const item of items) {
+  const uniqueItems: NewsItem[] = [];
+  const seenTitles = new Set<string>();
+  for (const item of all) {
     const normalizedTitle = item.title.toLowerCase().trim();
     if (!seenTitles.has(normalizedTitle)) {
       seenTitles.add(normalizedTitle);
@@ -217,8 +218,9 @@ export async function fetchGeopoliticsNews(): Promise<NewsItem[]> {
     }
   }
 
-  _cache = { items: uniqueItems, expiry: Date.now() + 3 * 60 * 1000 };
-  return uniqueItems;
+  const result = uniqueItems.slice(0, 30);
+  _cache = { items: result, expiry: Date.now() + 3 * 60 * 1000 };
+  return result;
 }
 
 const SYMBOL_KEYWORDS: Record<string, string[]> = {
@@ -270,156 +272,4 @@ function buildNewsContext(items: NewsItem[]): NewsContext {
     headlines: items.slice(0, 3).map((n) => n.title),
     breakingAlert: items.some((n) => n.isBreaking),
   };
-}
-
-function getFallbackNews(): NewsItem[] {
-  const now = new Date().toISOString();
-  const oneHourAgo = new Date(Date.now() - 3_600_000).toISOString();
-  const twoHoursAgo = new Date(Date.now() - 7_200_000).toISOString();
-  return [
-    {
-      id: "fb-1",
-      title: "Middle East Tensions Elevate Oil Market Risk Premium",
-      description:
-        "Escalating tensions near the Strait of Hormuz raise concerns over supply disruption to global crude markets.",
-      url: "#",
-      source: "Hivemind Intel",
-      publishedAt: oneHourAgo,
-      sentiment: "bearish",
-      category: "energy",
-      isBreaking: true,
-    },
-    {
-      id: "fb-2",
-      title: "Fed Officials Signal Caution on Rate Cuts Amid Sticky Inflation",
-      description:
-        "Federal Reserve speakers push back on early easing expectations, citing persistent core PCE above target.",
-      url: "#",
-      source: "Hivemind Intel",
-      publishedAt: twoHoursAgo,
-      sentiment: "bearish",
-      category: "macro",
-      isBreaking: false,
-    },
-    {
-      id: "fb-3",
-      title: "Ukraine-Russia Ceasefire Talks Stall as Both Sides Harden Positions",
-      description:
-        "Diplomatic efforts hit a roadblock as both sides maintain hardline positions ahead of next round of negotiations.",
-      url: "#",
-      source: "Hivemind Intel",
-      publishedAt: twoHoursAgo,
-      sentiment: "bearish",
-      category: "conflict",
-      isBreaking: false,
-    },
-    {
-      id: "fb-4",
-      title: "China GDP Growth Misses Estimates, Trade Tensions Flare",
-      description:
-        "Weaker-than-expected Chinese output data adds to global growth concerns as US tariff threats resurface.",
-      url: "#",
-      source: "Hivemind Intel",
-      publishedAt: now,
-      sentiment: "bearish",
-      category: "macro",
-      isBreaking: false,
-    },
-    {
-      id: "fb-5",
-      title: "US-EU Trade Deal Progress Boosts Risk Appetite",
-      description:
-        "Reports of progress on transatlantic trade framework lift equities and reduce safe-haven demand.",
-      url: "#",
-      source: "Hivemind Intel",
-      publishedAt: now,
-      sentiment: "bullish",
-      category: "trade",
-      isBreaking: false,
-    },
-    {
-      id: "fb-6",
-      title: "OPEC+ Reaffirms Output Cuts Through Next Quarter",
-      description:
-        "Cartel reaffirms production discipline keeping oil prices supported near 3-month highs.",
-      url: "#",
-      source: "Hivemind Intel",
-      publishedAt: now,
-      sentiment: "neutral",
-      category: "energy",
-      isBreaking: false,
-    },
-    {
-      id: "fb-7",
-      title: "Bitcoin Holds Above Key Support as Institutional Flows Stabilize",
-      description:
-        "BTC consolidates after volatility spike as ETF inflows resume and on-chain metrics improve.",
-      url: "#",
-      source: "Hivemind Intel",
-      publishedAt: now,
-      sentiment: "bullish",
-      category: "crypto",
-      isBreaking: false,
-    },
-    {
-      id: "fb-8",
-      title: "Taiwan Strait Tensions Rise on PLA Naval Exercise Reports",
-      description:
-        "Beijing orders large-scale naval exercises near Taiwan, semiconductor supply chains in focus.",
-      url: "#",
-      source: "Hivemind Intel",
-      publishedAt: oneHourAgo,
-      sentiment: "bearish",
-      category: "geopolitics",
-      isBreaking: true,
-    },
-    {
-      id: "fb-9",
-      title: "Global Health Officials Monitor Novel Respiratory Outbreak",
-      description:
-        "WHO convenes emergency session as cluster of unusual respiratory cases reported across multiple countries.",
-      url: "#",
-      source: "Hivemind Intel",
-      publishedAt: oneHourAgo,
-      sentiment: "bearish",
-      category: "pandemic",
-      isBreaking: true,
-    },
-    {
-      id: "fb-10",
-      title: "Nvidia AI Chip Demand Outpaces Supply, Shares Hit Record",
-      description:
-        "Data center AI buildout accelerates as hyperscalers commit multi-year GPU procurement contracts.",
-      url: "#",
-      source: "Hivemind Intel",
-      publishedAt: now,
-      sentiment: "bullish",
-      category: "technology",
-      isBreaking: false,
-    },
-    {
-      id: "fb-11",
-      title: "North Korea ICBM Test Provokes Emergency UN Security Council Session",
-      description:
-        "Pyongyang launches long-range missile over Japan's EEZ; emergency UN session called.",
-      url: "#",
-      source: "Hivemind Intel",
-      publishedAt: twoHoursAgo,
-      sentiment: "bearish",
-      category: "conflict",
-      isBreaking: true,
-    },
-    {
-      id: "fb-12",
-      title: "ECB Holds Rates Steady as Eurozone Inflation Cools Toward Target",
-      description:
-        "European Central Bank signals patient approach as disinflation progress continues.",
-      url: "#",
-      source: "Hivemind Intel",
-      publishedAt: now,
-      sentiment: "neutral",
-      category: "macro",
-      isBreaking: false,
-    },
-  ];
 }

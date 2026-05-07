@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { RunMonteCarloBody, RunMonteCarloResponse } from "@workspace/api-zod";
 import { getGeoMarketsForAsset } from "../lib/polymarket-cache";
-import { fetchPolymarketData, getFallbackMarkets } from "./polymarket";
+import { fetchPolymarketData } from "./polymarket";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -75,14 +75,8 @@ router.post("/simulator/monte-carlo", async (req, res): Promise<void> => {
     const allMarkets = await fetchPolymarketData(30);
     const relevant = getGeoMarketsForAsset(symbol, allMarkets);
     if (relevant.length > 0) geopoliticsContext = relevant;
-  } catch {
-    try {
-      const fallback = getFallbackMarkets(20);
-      const relevant = getGeoMarketsForAsset(symbol, fallback);
-      if (relevant.length > 0) geopoliticsContext = relevant;
-    } catch (err) {
-      logger.warn({ err }, "Could not attach geo context to MC result");
-    }
+  } catch (err) {
+    logger.warn({ err }, "Could not attach geo context to MC result — Polymarket unavailable");
   }
 
   const result = {

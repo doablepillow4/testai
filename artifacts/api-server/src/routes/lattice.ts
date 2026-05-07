@@ -21,7 +21,7 @@ import { latticeRunsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { runTrainingCycle } from "../lib/scheduler";
 import { getGeoMarketsForAsset, buildPolymarketHeadline } from "../lib/polymarket-cache";
-import { fetchPolymarketData, getFallbackMarkets } from "./polymarket";
+import { fetchPolymarketData } from "./polymarket";
 import { logger } from "../lib/logger";
 import { latticeCache, TTL } from "../lib/cache";
 
@@ -47,7 +47,7 @@ router.post("/lattice/run", async (req, res): Promise<void> => {
 
     const [latticeResult, polyData] = await Promise.allSettled([
       runLattice(sym, timeframe, useV3),
-      fetchPolymarketData(30).catch(() => getFallbackMarkets(20)),
+      fetchPolymarketData(30),
     ]);
 
     if (latticeResult.status === "rejected") {
@@ -55,7 +55,7 @@ router.post("/lattice/run", async (req, res): Promise<void> => {
     }
 
     const result = latticeResult.value;
-    const markets = polyData.status === "fulfilled" ? polyData.value : getFallbackMarkets(20);
+    const markets = polyData.status === "fulfilled" ? polyData.value : [];
 
     const geoMarkets = getGeoMarketsForAsset(sym, markets);
     const polymarketIntel = geoMarkets.slice(0, 5).map((m) => ({
