@@ -47,18 +47,23 @@ router.post("/predictions", async (req, res): Promise<void> => {
   const { symbol, timeframe } = parsed.data;
   const upperSymbol = symbol.toUpperCase();
 
-  let currentPrice = 100;
+  let currentPrice: number;
   try {
     if (upperSymbol in CRYPTO_ID_MAP) {
       const cryptos = await fetchCryptoPrices();
       const crypto = cryptos.find((c) => c.symbol === upperSymbol);
-      currentPrice = crypto?.price ?? 100;
+      if (!crypto?.price) {
+        res.status(503).json({ error: `Live price unavailable for ${upperSymbol}` });
+        return;
+      }
+      currentPrice = crypto.price;
     } else {
       const stock = await fetchStockPrice(upperSymbol);
       currentPrice = stock.price;
     }
-  } catch {
-    currentPrice = 100;
+  } catch (err) {
+    res.status(503).json({ error: `Could not fetch live price for ${upperSymbol}` });
+    return;
   }
 
   const prediction = await generatePrediction(upperSymbol, timeframe ?? "7d", currentPrice);

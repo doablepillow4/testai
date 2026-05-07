@@ -8,7 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Simulator from "@/pages/simulator";
-import Geopolitics from "@/pages/geopolitics";
+import Intelligence from "@/pages/geopolitics";
 import Lattice from "@/pages/lattice";
 import { Layout } from "@/components/layout/layout";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -45,7 +45,7 @@ function Router() {
         <Route path="/" component={Dashboard} />
         <Route path="/lattice" component={Lattice} />
         <Route path="/simulator" component={Simulator} />
-        <Route path="/geopolitics" component={Geopolitics} />
+        <Route path="/intelligence" component={Intelligence} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

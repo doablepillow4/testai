@@ -9,7 +9,6 @@ import {
   getGetPredictionsQueryKey,
   getGetPredictionsSummaryQueryKey,
 } from "@workspace/api-client-react";
-import type { MarketPrice, PredictionsSummary } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Activity,
@@ -21,6 +20,7 @@ import {
   XCircle,
   Clock,
   AlertCircle,
+  WifiOff,
 } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
@@ -33,37 +33,7 @@ import {
 } from "@/components/ui/select";
 import { TickerCombobox } from "@/components/ticker-combobox";
 import { useAppStore } from "@/store/app-store";
-
-function makeSparkline(base: number, len = 15): number[] {
-  const pts: number[] = [base];
-  for (let i = 1; i < len; i++) pts.push(pts[i - 1] * (1 + (Math.random() - 0.5) * 0.012));
-  return pts;
-}
-
-const PLACEHOLDER_PRICES: MarketPrice[] = [
-  { symbol: "BTC", name: "Bitcoin", price: 81000, change: -620, changePercent: -0.76, volume: 28_400_000_000, marketCap: 1_600_000_000_000, type: "crypto", sparkline: makeSparkline(81000), updatedAt: new Date().toISOString() },
-  { symbol: "ETH", name: "Ethereum", price: 2330, change: -22, changePercent: -0.93, volume: 13_200_000_000, marketCap: 280_000_000_000, type: "crypto", sparkline: makeSparkline(2330), updatedAt: new Date().toISOString() },
-  { symbol: "SOL", name: "Solana", price: 89, change: 1.8, changePercent: 2.06, volume: 4_100_000_000, marketCap: 45_000_000_000, type: "crypto", sparkline: makeSparkline(89), updatedAt: new Date().toISOString() },
-  { symbol: "BNB", name: "BNB", price: 649, change: -4.1, changePercent: -0.63, volume: 1_800_000_000, marketCap: 91_000_000_000, type: "crypto", sparkline: makeSparkline(649), updatedAt: new Date().toISOString() },
-  { symbol: "DOGE", name: "Dogecoin", price: 0.168, change: 0.003, changePercent: 1.8, volume: 1_200_000_000, marketCap: 24_000_000_000, type: "crypto", sparkline: makeSparkline(0.168), updatedAt: new Date().toISOString() },
-  { symbol: "AVAX", name: "Avalanche", price: 19.4, change: -0.5, changePercent: -2.5, volume: 420_000_000, marketCap: 8_000_000_000, type: "crypto", sparkline: makeSparkline(19.4), updatedAt: new Date().toISOString() },
-  { symbol: "AAPL", name: "Apple Inc", price: 198.5, change: 2.1, changePercent: 1.07, volume: 54_000_000, marketCap: 2_980_000_000_000, type: "stock", sparkline: makeSparkline(198.5), updatedAt: new Date().toISOString() },
-  { symbol: "MSFT", name: "Microsoft", price: 392.0, change: -1.8, changePercent: -0.46, volume: 22_000_000, marketCap: 2_910_000_000_000, type: "stock", sparkline: makeSparkline(392.0), updatedAt: new Date().toISOString() },
-  { symbol: "NVDA", name: "NVIDIA", price: 109.0, change: 3.2, changePercent: 3.02, volume: 48_000_000, marketCap: 2_660_000_000_000, type: "stock", sparkline: makeSparkline(109.0), updatedAt: new Date().toISOString() },
-  { symbol: "TSLA", name: "Tesla", price: 278.0, change: -5.4, changePercent: -1.9, volume: 87_000_000, marketCap: 893_000_000_000, type: "stock", sparkline: makeSparkline(278.0), updatedAt: new Date().toISOString() },
-  { symbol: "AMZN", name: "Amazon", price: 193.0, change: 1.1, changePercent: 0.57, volume: 31_000_000, marketCap: 2_040_000_000_000, type: "stock", sparkline: makeSparkline(193.0), updatedAt: new Date().toISOString() },
-  { symbol: "GOOGL", name: "Alphabet", price: 163.0, change: 0.9, changePercent: 0.56, volume: 19_000_000, marketCap: 1_980_000_000_000, type: "stock", sparkline: makeSparkline(163.0), updatedAt: new Date().toISOString() },
-];
-
-const PLACEHOLDER_SUMMARY: PredictionsSummary = {
-  totalPredictions: 0,
-  correctPredictions: 0,
-  accuracy: 0,
-  averageConfidence: 0,
-  recentAccuracy: 0,
-  improvementTrend: 0,
-  bySymbol: [],
-};
+import { formatPrice } from "@/lib/format";
 
 export default function Dashboard() {
   const {
@@ -74,7 +44,6 @@ export default function Dashboard() {
     query: {
       refetchInterval: 30000,
       queryKey: getGetMarketPricesQueryKey(),
-      placeholderData: PLACEHOLDER_PRICES,
     },
   });
   const {
@@ -92,7 +61,6 @@ export default function Dashboard() {
     query: {
       refetchInterval: 30000,
       queryKey: getGetPredictionsSummaryQueryKey(),
-      placeholderData: PLACEHOLDER_SUMMARY,
     },
   });
 
@@ -110,7 +78,7 @@ export default function Dashboard() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>(selectedAsset?.symbol ?? "");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1d");
 
-  const priceList = Array.isArray(prices) && prices.length > 0 ? prices : PLACEHOLDER_PRICES;
+  const priceList = Array.isArray(prices) ? prices : [];
   const predictionList = Array.isArray(predictions) ? predictions : [];
   const hasApiErrors = Boolean(pricesError || predictionsError || summaryError);
 
@@ -144,10 +112,9 @@ export default function Dashboard() {
         <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <div className="text-sm font-semibold text-red-300 mb-1">Backend Connection Issue</div>
+            <div className="text-sm font-semibold text-red-300 mb-1">Live Data Unavailable</div>
             <div className="text-xs text-red-200/80">
-              The API server is currently unavailable. Displaying cached data when available. Ensure
-              the backend is configured with a PostgreSQL database.
+              One or more data sources could not be reached. Prices will refresh automatically.
             </div>
           </div>
         </div>
@@ -262,11 +229,10 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <Zap className="w-3.5 h-3.5 text-primary" />
             <span className="text-[11px] font-semibold text-white tracking-wide">
-              Generate Prediction
+              Run Prediction
             </span>
           </div>
 
-          {/* Autocomplete search */}
           <TickerCombobox
             value={selectedSymbol}
             onChange={handleSymbolChange}
@@ -279,7 +245,6 @@ export default function Dashboard() {
             placeholder="Search ticker or company name…"
           />
 
-          {/* Selected asset preview */}
           {selectedSymbol &&
             (() => {
               const asset = priceList.find((p) => p.symbol === selectedSymbol);
@@ -294,11 +259,7 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[12px] font-mono text-white">
-                      $
-                      {asset.price.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      ${formatPrice(asset.price)}
                     </span>
                     <span
                       className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${asset.changePercent >= 0 ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10"}`}
@@ -317,27 +278,13 @@ export default function Dashboard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="15m" className="font-mono">
-                  15 Min
-                </SelectItem>
-                <SelectItem value="30m" className="font-mono">
-                  30 Min
-                </SelectItem>
-                <SelectItem value="1h" className="font-mono">
-                  1 Hour
-                </SelectItem>
-                <SelectItem value="6h" className="font-mono">
-                  6 Hours
-                </SelectItem>
-                <SelectItem value="12h" className="font-mono">
-                  12 Hours
-                </SelectItem>
-                <SelectItem value="1d" className="font-mono">
-                  1 Day
-                </SelectItem>
-                <SelectItem value="7d" className="font-mono">
-                  1 Week
-                </SelectItem>
+                <SelectItem value="15m" className="font-mono">15 Min</SelectItem>
+                <SelectItem value="30m" className="font-mono">30 Min</SelectItem>
+                <SelectItem value="1h" className="font-mono">1 Hour</SelectItem>
+                <SelectItem value="6h" className="font-mono">6 Hours</SelectItem>
+                <SelectItem value="12h" className="font-mono">12 Hours</SelectItem>
+                <SelectItem value="1d" className="font-mono">1 Day</SelectItem>
+                <SelectItem value="7d" className="font-mono">1 Week</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -350,7 +297,19 @@ export default function Dashboard() {
             </Button>
           </div>
 
-          {/* Inline result of just-generated prediction */}
+          {/* Prediction error */}
+          {createPrediction.isError && (
+            <div className="mt-1 rounded-lg border border-red-500/25 bg-red-500/5 p-3 flex items-center gap-2">
+              <WifiOff className="w-3.5 h-3.5 text-red-400 shrink-0" />
+              <span className="text-[11px] text-red-300">
+                {createPrediction.error instanceof Error
+                  ? createPrediction.error.message
+                  : "Live price unavailable — try again shortly"}
+              </span>
+            </div>
+          )}
+
+          {/* Inline result */}
           {latestPrediction && (
             <div
               className={`mt-1 rounded-lg border p-3 ${
@@ -380,7 +339,7 @@ export default function Dashboard() {
               <div className="flex gap-4 text-[10px] font-mono text-muted-foreground">
                 <span>
                   Target{" "}
-                  <span className="text-white">${latestPrediction.targetPrice.toFixed(2)}</span>
+                  <span className="text-white">${formatPrice(latestPrediction.targetPrice)}</span>
                 </span>
                 <span>
                   Conf{" "}
@@ -401,18 +360,25 @@ export default function Dashboard() {
             Live Markets
           </h2>
           <div className="text-[10px] font-mono text-muted-foreground">
-            {priceList.length} assets
+            {priceList.length > 0 ? `${priceList.length} assets` : "loading…"}
           </div>
         </div>
 
         {loadingPrices && priceList.length === 0 ? (
           <div className="grid grid-cols-2 gap-3">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div
                 key={i}
                 className="h-28 rounded-xl bg-card/40 border border-white/[0.05] animate-pulse"
               />
             ))}
+          </div>
+        ) : pricesError && priceList.length === 0 ? (
+          <div className="py-12 text-center border border-dashed border-red-500/20 rounded-xl bg-red-500/5">
+            <WifiOff className="w-6 h-6 text-red-400/50 mx-auto mb-2" />
+            <p className="text-[12px] text-red-300/70">
+              Live market data unavailable. Retrying…
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
@@ -449,27 +415,29 @@ export default function Dashboard() {
                   </div>
 
                   <div className="text-[13px] font-mono font-600 text-white mb-2">
-                    $
-                    {price.price.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    ${formatPrice(price.price)}
                   </div>
 
                   <div className="h-9 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={price.sparkline.map((val, i) => ({ val, i }))}>
-                        <YAxis domain={["auto", "auto"]} hide />
-                        <Line
-                          type="monotone"
-                          dataKey="val"
-                          stroke={price.changePercent >= 0 ? "#34d399" : "#f87171"}
-                          strokeWidth={1.5}
-                          dot={false}
-                          isAnimationActive={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    {price.sparkline.length > 1 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={price.sparkline.map((val: number, i: number) => ({ val, i }))}>
+                          <YAxis domain={["auto", "auto"]} hide />
+                          <Line
+                            type="monotone"
+                            dataKey="val"
+                            stroke={price.changePercent >= 0 ? "#34d399" : "#f87171"}
+                            strokeWidth={1.5}
+                            dot={false}
+                            isAnimationActive={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center">
+                        <div className="h-px w-full bg-white/10" />
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -538,66 +506,40 @@ export default function Dashboard() {
                       {pred.outcome === "incorrect" && (
                         <XCircle className="w-3.5 h-3.5 text-red-400" />
                       )}
-                      {pred.outcome === "pending" && (
+                      {(pred.outcome === "pending" || pred.outcome === null) && (
                         <Clock className="w-3.5 h-3.5 text-amber-400/60" />
                       )}
-                      <div
-                        className={`text-[9px] font-mono px-2 py-1 rounded-full font-semibold tracking-widest uppercase ${
+                      <span
+                        className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-semibold uppercase tracking-widest ${
                           pred.direction === "bullish"
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            ? "bg-emerald-500/15 text-emerald-400"
                             : pred.direction === "bearish"
-                              ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                              : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                              ? "bg-red-500/15 text-red-400"
+                              : "bg-amber-500/15 text-amber-400"
                         }`}
                       >
                         {pred.direction}
-                      </div>
+                      </span>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <div className="data-label mb-1">Target Price</div>
-                      <div className="text-[13px] font-mono font-600 text-white">
-                        $
-                        {pred.targetPrice.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                      <div className="data-label mb-0.5">Entry</div>
+                      <div className="text-[11px] font-mono text-white">
+                        ${formatPrice(pred.currentPrice)}
                       </div>
                     </div>
                     <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="data-label">Confidence</span>
-                        <span className="text-[10px] font-mono text-primary">
-                          {(pred.confidence * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full"
-                          style={{
-                            width: `${pred.confidence * 100}%`,
-                            boxShadow: "0 0 6px rgba(0,212,255,0.5)",
-                          }}
-                        />
+                      <div className="data-label mb-0.5">Target</div>
+                      <div className="text-[11px] font-mono text-white">
+                        ${formatPrice(pred.targetPrice)}
                       </div>
                     </div>
-                  </div>
-
-                  <div className="bg-black/20 rounded-lg p-2.5 border border-white/[0.04]">
-                    <div className="data-label mb-2">Key Signals</div>
-                    <div className="space-y-1.5">
-                      {pred.signals.slice(0, 3).map((sig, i) => (
-                        <div key={i} className="flex justify-between items-center">
-                          <span className="text-[11px] text-white/60">{sig.name}</span>
-                          <span
-                            className={`text-[11px] font-mono ${sig.bullish ? "text-emerald-400" : "text-red-400"}`}
-                          >
-                            {sig.value.toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
+                    <div>
+                      <div className="data-label mb-0.5">Confidence</div>
+                      <div className="text-[11px] font-mono text-primary">
+                        {(pred.confidence * 100).toFixed(0)}%
+                      </div>
                     </div>
                   </div>
                 </div>

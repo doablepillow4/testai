@@ -62,10 +62,12 @@ router.post("/lattice/run", async (req, res): Promise<void> => {
       headline: buildPolymarketHeadline(m),
       question: m.question,
       yesPrice: m.yesPrice,
+      noPrice: m.noPrice,
       oddsShift: m.oddsShift,
       marketImpact: m.marketImpact,
       category: m.category,
       volume: m.volume,
+      liquidity: m.liquidity,
     }));
 
     const enrichedResult = {

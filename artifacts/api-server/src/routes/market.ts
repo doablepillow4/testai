@@ -45,22 +45,7 @@ router.get("/market/prices", async (req, res): Promise<void> => {
     .filter((item): item is NonNullable<typeof item> => item !== null);
 
   if (prices.length === 0) {
-    res.json([
-      ...STOCK_SYMBOL_LIST.map((symbol) =>
-        GetMarketPricesResponseItem.parse({
-          symbol,
-          name: symbol,
-          price: 100,
-          change: 0,
-          changePercent: 0,
-          volume: 0,
-          marketCap: 0,
-          type: "stock",
-          sparkline: Array.from({ length: 15 }, () => 100),
-          updatedAt: new Date().toISOString(),
-        }),
-      ),
-    ]);
+    res.status(503).json({ error: "Market data unavailable — all price sources failed" });
     return;
   }
 

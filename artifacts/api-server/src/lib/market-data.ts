@@ -125,10 +125,11 @@ export async function fetchCryptoPrices() {
 
     const byId = new Map(data.map((d) => [d.id, d]));
 
-    return Object.entries(CRYPTO_IDS).map(([sym, info]) => {
+    return Object.entries(CRYPTO_IDS).flatMap(([sym, info]) => {
       const d = byId.get(info.id);
       if (!d || !d.current_price) {
-        throw new Error(`Missing price data from CoinGecko for ${sym} (${info.id})`);
+        logger.warn({ sym, id: info.id }, "CoinGecko missing price for entry — skipping");
+        return [];
       }
       const price = safeNum(d.current_price);
       const changePercent = safeNum(d.price_change_percentage_24h);
@@ -137,7 +138,7 @@ export async function fetchCryptoPrices() {
         rawSparkline.length >= 15
           ? sanitizeSparkline(rawSparkline.slice(-15))
           : [];
-      return {
+      return [{
         symbol: sym,
         name: info.name,
         price,
@@ -148,7 +149,7 @@ export async function fetchCryptoPrices() {
         type: "crypto" as const,
         sparkline,
         updatedAt: new Date().toISOString(),
-      };
+      }];
     });
   });
 }

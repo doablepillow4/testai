@@ -27,6 +27,7 @@ export function getGeoMarketsForAsset(
     yesPrice: number;
     noPrice: number;
     volume: number;
+    liquidity?: number;
     category: string;
     oddsShift?: number | null;
   }>,
@@ -35,6 +36,7 @@ export function getGeoMarketsForAsset(
   yesPrice: number;
   noPrice: number;
   volume: number;
+  liquidity: number;
   category: string;
   marketImpact: string;
   oddsShift: number | null;
@@ -121,6 +123,7 @@ export function getGeoMarketsForAsset(
         yesPrice: m.yesPrice,
         noPrice: m.noPrice,
         volume: m.volume,
+        liquidity: m.liquidity ?? 0,
         category: m.category,
         marketImpact: IMPACT_MAP[matchedKey] ?? IMPACT_MAP.default,
         oddsShift: m.oddsShift ?? null,

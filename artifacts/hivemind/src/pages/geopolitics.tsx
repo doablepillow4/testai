@@ -29,36 +29,11 @@ import {
   Loader2,
   Radar,
   ArrowRight,
+  WifiOff,
+  Telescope,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
-
-// ─── Placeholder / fallback data ─────────────────────────────────────────────
-const _now = new Date().toISOString();
-const _1h = new Date(Date.now() - 3_600_000).toISOString();
-const _2h = new Date(Date.now() - 7_200_000).toISOString();
-
-const PLACEHOLDER_NEWS: NewsItem[] = [
-  { id: "ph-1", title: "Middle East Tensions Elevate Oil Market Risk Premium", description: "Escalating tensions near the Strait of Hormuz raise concerns over supply disruption.", url: "#", source: "Hivemind Intel", publishedAt: _1h, sentiment: "bearish", category: "energy", isBreaking: true },
-  { id: "ph-2", title: "Fed Officials Signal Caution on Rate Cuts Amid Sticky Inflation", description: "Federal Reserve speakers push back on early easing expectations.", url: "#", source: "Hivemind Intel", publishedAt: _2h, sentiment: "bearish", category: "macro", isBreaking: false },
-  { id: "ph-3", title: "Ukraine-Russia Ceasefire Talks Stall as Both Sides Harden Positions", description: "Diplomatic efforts hit a roadblock ahead of next negotiations.", url: "#", source: "Hivemind Intel", publishedAt: _2h, sentiment: "bearish", category: "conflict", isBreaking: false },
-  { id: "ph-4", title: "China GDP Growth Misses Estimates, Trade Tensions Flare", description: "Weaker-than-expected output data adds to global growth concerns.", url: "#", source: "Hivemind Intel", publishedAt: _now, sentiment: "bearish", category: "macro", isBreaking: false },
-  { id: "ph-5", title: "US-EU Trade Deal Progress Boosts Risk Appetite", description: "Reports of progress on transatlantic trade framework lift equities.", url: "#", source: "Hivemind Intel", publishedAt: _now, sentiment: "bullish", category: "trade", isBreaking: false },
-  { id: "ph-6", title: "OPEC+ Reaffirms Output Cuts Through Next Quarter", description: "Cartel reaffirms production discipline keeping oil prices supported.", url: "#", source: "Hivemind Intel", publishedAt: _now, sentiment: "neutral", category: "energy", isBreaking: false },
-  { id: "ph-7", title: "Bitcoin Holds Above Key Support as Institutional Flows Stabilize", description: "BTC consolidates after volatility spike as ETF inflows resume.", url: "#", source: "Hivemind Intel", publishedAt: _now, sentiment: "bullish", category: "crypto", isBreaking: false },
-  { id: "ph-8", title: "Taiwan Strait Tensions Rise on PLA Naval Exercise Reports", description: "Beijing orders large-scale naval exercises near Taiwan.", url: "#", source: "Hivemind Intel", publishedAt: _1h, sentiment: "bearish", category: "geopolitics", isBreaking: true },
-  { id: "ph-9", title: "Global Health Officials Monitor Novel Respiratory Outbreak", description: "WHO convenes emergency session as cluster of unusual respiratory cases reported.", url: "#", source: "Hivemind Intel", publishedAt: _1h, sentiment: "bearish", category: "pandemic", isBreaking: true },
-  { id: "ph-10", title: "Nvidia AI Chip Demand Outpaces Supply, Shares Hit Record", description: "Data center AI buildout accelerates as hyperscalers commit multi-year GPU contracts.", url: "#", source: "Hivemind Intel", publishedAt: _now, sentiment: "bullish", category: "technology", isBreaking: false },
-];
-
-const PLACEHOLDER_MARKETS: PolymarketMarket[] = [
-  { id: "pm-1", question: "Will the US Federal Reserve cut rates in 2025?", category: "macro", yesPrice: 0.62, noPrice: 0.38, volume: 4_200_000, endDate: "2025-12-31", url: "#" },
-  { id: "pm-2", question: "Will Bitcoin reach $100k before end of 2025?", category: "crypto", yesPrice: 0.55, noPrice: 0.45, volume: 8_700_000, endDate: "2025-12-31", url: "#" },
-  { id: "pm-3", question: "Will there be a US-China trade deal in 2025?", category: "trade", yesPrice: 0.28, noPrice: 0.72, volume: 2_100_000, endDate: "2025-12-31", url: "#" },
-  { id: "pm-4", question: "Will Ukraine-Russia ceasefire be reached in 2025?", category: "conflict", yesPrice: 0.41, noPrice: 0.59, volume: 5_300_000, endDate: "2025-12-31", url: "#" },
-  { id: "pm-5", question: "Will OPEC+ maintain current production cuts through Q3?", category: "energy", yesPrice: 0.71, noPrice: 0.29, volume: 1_800_000, endDate: "2025-09-30", url: "#" },
-  { id: "pm-6", question: "Will there be a new WHO global health emergency declared?", category: "pandemic", yesPrice: 0.33, noPrice: 0.67, volume: 920_000, endDate: "2025-12-31", url: "#" },
-];
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface GeoImpactAnalysis {
@@ -93,26 +68,85 @@ async function fetchGeoImpact(item: NewsItem): Promise<GeoImpactAnalysis> {
     }),
     signal: AbortSignal.timeout(8000),
   });
-  if (!res.ok) {
-    console.warn(`geo-impact failed: ${res.status}, using fallback`);
-    return {
-      type: "unknown",
-      label: "Analysis Unavailable",
-      severity: "watch",
-      lockdownRisk: 0,
-      economicDisruptionRisk: 0,
-      marketImpactScore: 0,
-      timeHorizon: "Unknown",
-      affectedSectors: [],
-      affectedTickers: [],
-      polymarketSearchTerms: [],
-      narrative:
-        "Real-time analysis is currently unavailable for this item. Please check back later.",
-    };
-  }
+  if (!res.ok) throw new Error(`geo-impact failed: ${res.status}`);
   const data = (await res.json()) as GeoImpactAnalysis;
   _geoCache.set(cacheKey, data);
   return data;
+}
+
+// ─── Risk Barometer ───────────────────────────────────────────────────────────
+function computeRiskBarometer(
+  news: NewsItem[],
+  markets: PolymarketMarket[],
+): {
+  score: number;
+  level: "LOW" | "MODERATE" | "ELEVATED" | "CRITICAL";
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  drivers: string[];
+} | null {
+  if (news.length === 0 && markets.length === 0) return null;
+
+  const bearishNews = news.filter((n) => n.sentiment === "bearish").length;
+  const newsScore = news.length > 0 ? (bearishNews / news.length) * 35 : 0;
+
+  const breakingCount = news.filter((n) => n.isBreaking).length;
+  const breakingScore = Math.min(15, breakingCount * 5);
+
+  const threatMarkets = markets.filter((m) => {
+    const q = m.question.toLowerCase();
+    return /conflict|war|nuclear|invasion|recession|crisis|pandemic|attack|collapse|sanctions/.test(
+      q,
+    );
+  });
+  const avgThreat =
+    threatMarkets.length > 0
+      ? threatMarkets.reduce((sum, m) => sum + m.yesPrice, 0) / threatMarkets.length
+      : 0.18;
+  const polyScore = avgThreat * 50;
+
+  const score = Math.min(100, Math.round(newsScore + breakingScore + polyScore));
+
+  let level: "LOW" | "MODERATE" | "ELEVATED" | "CRITICAL";
+  let color: string;
+  let bgColor: string;
+  let borderColor: string;
+  if (score < 25) {
+    level = "LOW";
+    color = "text-emerald-400";
+    bgColor = "bg-emerald-500/10";
+    borderColor = "border-emerald-500/20";
+  } else if (score < 50) {
+    level = "MODERATE";
+    color = "text-yellow-400";
+    bgColor = "bg-yellow-500/10";
+    borderColor = "border-yellow-500/20";
+  } else if (score < 72) {
+    level = "ELEVATED";
+    color = "text-orange-400";
+    bgColor = "bg-orange-500/10";
+    borderColor = "border-orange-500/25";
+  } else {
+    level = "CRITICAL";
+    color = "text-red-400";
+    bgColor = "bg-red-500/15";
+    borderColor = "border-red-500/30";
+  }
+
+  const drivers: string[] = [];
+  news
+    .filter((n) => n.isBreaking)
+    .slice(0, 2)
+    .forEach((n) => drivers.push(n.title.slice(0, 55) + "…"));
+  threatMarkets
+    .sort((a, b) => b.yesPrice - a.yesPrice)
+    .slice(0, 2)
+    .forEach((m) =>
+      drivers.push(`${m.question.slice(0, 45)}… (${(m.yesPrice * 100).toFixed(0)}%)`),
+    );
+
+  return { score, level, color, bgColor, borderColor, drivers };
 }
 
 // ─── Threat type config ───────────────────────────────────────────────────────
@@ -239,140 +273,45 @@ const REGION_CONFIG: Record<string, { label: string; flag: string; keywords: str
     label: "Americas",
     flag: "🌎",
     keywords: [
-      "us ",
-      "u.s.",
-      "usa",
-      "america",
-      "american",
-      "canada",
-      "mexico",
-      "brazil",
-      "latin",
-      "election",
-      "trump",
-      "biden",
-      "congress",
-      "fed ",
-      "federal reserve",
-      "dollar",
-      "democratic",
-      "republican",
-      "democrat",
-      "presidential",
-      "nomination",
-      "senate",
-      "house of rep",
-      "wall street",
-      "nasdaq",
-      "s&p",
-      "dow ",
-      "white house",
-      "pentagon",
-      "washington",
+      "us ", "u.s.", "usa", "america", "american", "canada", "mexico", "brazil", "latin",
+      "election", "trump", "biden", "congress", "fed ", "federal reserve", "dollar",
+      "democratic", "republican", "democrat", "presidential", "nomination", "senate",
+      "house of rep", "wall street", "nasdaq", "s&p", "dow ", "white house", "pentagon", "washington",
     ],
   },
   europe: {
     label: "Europe",
     flag: "🇪🇺",
     keywords: [
-      "europe",
-      "european",
-      " eu ",
-      "nato",
-      "ukraine",
-      "russia",
-      "uk ",
-      "britain",
-      "british",
-      "germany",
-      "german",
-      "france",
-      "french",
-      "ecb",
-      "euro",
-      "macron",
-      "scholz",
-      "zelensky",
-      "putin",
-      "brexit",
-      "poland",
-      "swedish",
+      "europe", "european", " eu ", "nato", "ukraine", "russia", "uk ", "britain", "british",
+      "germany", "german", "france", "french", "ecb", "euro", "macron", "scholz", "zelensky",
+      "putin", "brexit", "poland", "swedish",
     ],
   },
   middleeast: {
     label: "Middle East",
     flag: "🌙",
     keywords: [
-      "iran",
-      "israel",
-      "israeli",
-      "saudi",
-      "gulf",
-      "opec",
-      "oil price",
-      "yemen",
-      "iraq",
-      "syria",
-      "hormuz",
-      "hamas",
-      "hezbollah",
-      "gaza",
-      "netanyahu",
-      "beirut",
-      "tehran",
-      "riyadh",
+      "iran", "israel", "israeli", "saudi", "gulf", "opec", "oil price", "yemen", "iraq",
+      "syria", "hormuz", "hamas", "hezbollah", "gaza", "netanyahu", "beirut", "tehran", "riyadh",
     ],
   },
   asia: {
     label: "Asia Pacific",
     flag: "🌏",
     keywords: [
-      "china",
-      "chinese",
-      "taiwan",
-      "japan",
-      "japanese",
-      "korea",
-      "korean",
-      "india",
-      "indian",
-      "asean",
-      "xi jinping",
-      "south china",
-      "pacific",
-      "semiconductor",
-      "beijing",
-      "tokyo",
-      "seoul",
-      "modi",
-      "philippines",
-      "vietnam",
+      "china", "chinese", "taiwan", "japan", "japanese", "korea", "korean", "india", "indian",
+      "asean", "xi jinping", "south china", "pacific", "semiconductor", "beijing", "tokyo",
+      "seoul", "modi", "philippines", "vietnam",
     ],
   },
   global: {
     label: "Global",
     flag: "⚡",
     keywords: [
-      "global",
-      "world",
-      "imf",
-      "g7",
-      "g20",
-      "wto",
-      "pandemic",
-      "climate",
-      "inflation",
-      "interest rate",
-      "nuclear",
-      "bitcoin",
-      "crypto",
-      "ethereum",
-      "ai ",
-      "artificial intelligence",
-      "recession",
-      "gdp",
-      "gold ",
-      "oil barrel",
+      "global", "world", "imf", "g7", "g20", "wto", "pandemic", "climate", "inflation",
+      "interest rate", "nuclear", "bitcoin", "crypto", "ethereum", "ai ", "artificial intelligence",
+      "recession", "gdp", "gold ", "oil barrel",
     ],
   },
 };
@@ -382,21 +321,12 @@ const MARKET_EXPOSURE: Record<string, { tickers: string[]; note: string }> = {
   china: { tickers: ["BABA", "JD", "NVDA", "TSM"], note: "Semiconductor & China-exposed tech" },
   taiwan: { tickers: ["TSM", "NVDA", "AMAT", "SPY"], note: "Semiconductor supply chain at risk" },
   ukraine: { tickers: ["CORN", "WEAT", "XOM", "SPY"], note: "Commodities + European defence" },
-  iran: {
-    tickers: ["USO", "XOM", "GLD", "BTC"],
-    note: "Oil + safe havens spike on Strait tensions",
-  },
+  iran: { tickers: ["USO", "XOM", "GLD", "BTC"], note: "Oil + safe havens spike on Strait tensions" },
   election: { tickers: ["SPY", "TLT", "DXY", "BTC"], note: "Volatility + policy repricing" },
   fed: { tickers: ["TLT", "SPY", "GLD", "BTC"], note: "Rate-sensitive assets across the board" },
-  nuclear: {
-    tickers: ["GLD", "BTC", "TLT", "VIX"],
-    note: "Flight to safety — classic risk-off trade",
-  },
+  nuclear: { tickers: ["GLD", "BTC", "TLT", "VIX"], note: "Flight to safety — classic risk-off trade" },
   crypto: { tickers: ["BTC", "ETH", "SOL", "COIN"], note: "Direct regulatory or sentiment impact" },
-  pandemic: {
-    tickers: ["XLV", "AMZN", "ZM", "UAL", "DAL"],
-    note: "Healthcare + e-commerce up, travel down",
-  },
+  pandemic: { tickers: ["XLV", "AMZN", "ZM", "UAL", "DAL"], note: "Healthcare + e-commerce up, travel down" },
   default: { tickers: ["SPY", "GLD", "BTC"], note: "Broad market + safe-haven impact" },
 };
 
@@ -427,28 +357,12 @@ function classifyRegion(market: { question: string; category?: string | null }):
 
 function riskLevel(yesPrice: number) {
   if (yesPrice >= 0.65)
-    return {
-      label: "HIGH",
-      color: "text-red-400",
-      bg: "bg-red-500/10",
-      border: "border-red-500/20",
-    };
+    return { label: "HIGH", color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20" };
   if (yesPrice >= 0.35)
-    return {
-      label: "MEDIUM",
-      color: "text-amber-400",
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20",
-    };
-  return {
-    label: "LOW",
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-500/20",
-  };
+    return { label: "MED", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" };
+  return { label: "LOW", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
 }
 
-// ─── Enhanced findRelatedMarkets (includes health/pandemic) ───────────────────
 function findRelatedMarkets(
   newsTitle: string,
   description: string,
@@ -459,41 +373,10 @@ function findRelatedMarkets(
     oil: ["oil", "opec", "energy", "hormuz", "crude", "petroleum", "gas "],
     china: ["china", "chinese", "beijing", "xi jinping", "taiwan", "south china sea"],
     ukraine: ["ukraine", "russia", "putin", "zelensky", "nato", "kyiv", "moscow"],
-    middleeast: [
-      "iran",
-      "israel",
-      "israeli",
-      "gaza",
-      "hamas",
-      "hezbollah",
-      "lebanon",
-      "beirut",
-      "tehran",
-      "tel aviv",
-    ],
-    election: [
-      "election",
-      "trump",
-      "biden",
-      "vote",
-      "poll ",
-      "republican",
-      "democrat",
-      "presidential",
-      "harris",
-    ],
+    middleeast: ["iran", "israel", "israeli", "gaza", "hamas", "hezbollah", "lebanon", "beirut", "tehran", "tel aviv"],
+    election: ["election", "trump", "biden", "vote", "poll ", "republican", "democrat", "presidential", "harris"],
     macro: ["fed ", "interest rate", "inflation", "cpi ", "recession", "debt", "treasury"],
-    pandemic: [
-      "pandemic",
-      "virus",
-      "outbreak",
-      "lockdown",
-      "mpox",
-      "bird flu",
-      "vaccine",
-      "health emergency",
-      "quarantine",
-    ],
+    pandemic: ["pandemic", "virus", "outbreak", "lockdown", "mpox", "bird flu", "vaccine", "health emergency", "quarantine"],
     crypto: ["bitcoin", "crypto", "ethereum", "stablecoin", "sec ", "binance", "coinbase"],
   };
 
@@ -508,59 +391,66 @@ function findRelatedMarkets(
       matches.push(...related);
     }
   }
-
   return Array.from(new Set(matches)).slice(0, 5);
 }
 
-// ─── Main Geopolitics Page ───────────────────────────────────────────────────
-export default function Geopolitics() {
+// ─── Main Intelligence Page ───────────────────────────────────────────────────
+export default function Intelligence() {
   const [selectedRegion, setSelectedRegion] = useState("all");
   const [expandedNews, setExpandedNews] = useState<string | null>(null);
   const [analyses, setAnalyses] = useState<Record<string, GeoImpactAnalysis>>({});
+  const [analysisErrors, setAnalysisErrors] = useState<Record<string, string>>({});
   const [loadingAnalysis, setLoadingAnalysis] = useState<Record<string, boolean>>({});
 
-  const { data: newsData, isLoading: loadingNews } = useGetNews(undefined, {
+  const {
+    data: newsData,
+    isLoading: loadingNews,
+    error: newsError,
+  } = useGetNews(undefined, {
     query: {
       queryKey: getGetNewsQueryKey(),
       refetchInterval: 60000,
-      placeholderData: PLACEHOLDER_NEWS,
     },
   });
 
-  const { data: polymarketData, isLoading: loadingMarkets } = useGetPolymarketMarkets(undefined, {
+  const {
+    data: polymarketData,
+    isLoading: loadingMarkets,
+    error: marketsError,
+  } = useGetPolymarketMarkets(undefined, {
     query: {
       queryKey: ["polymarket-markets"],
       refetchInterval: 60000,
-      placeholderData: PLACEHOLDER_MARKETS,
     },
   });
 
+  const newsItems: NewsItem[] = Array.isArray(newsData) ? newsData : [];
+  const markets: PolymarketMarket[] = Array.isArray(polymarketData) ? polymarketData : [];
+
+  const barometer = useMemo(
+    () => computeRiskBarometer(newsItems, markets),
+    [newsItems, markets],
+  );
+
   const filteredNews = useMemo(() => {
-    const items = Array.isArray(newsData) && newsData.length > 0 ? newsData : PLACEHOLDER_NEWS;
-    if (selectedRegion === "all") return items;
+    if (selectedRegion === "all") return newsItems;
     const cfg = REGION_CONFIG[selectedRegion];
-    return items.filter((item) => {
+    return newsItems.filter((item) => {
       const text = (item.title + " " + (item.description ?? "")).toLowerCase();
       return cfg.keywords.some((kw) => text.includes(kw));
     });
-  }, [newsData, selectedRegion]);
+  }, [newsItems, selectedRegion]);
 
   const marketByRegion = useMemo(() => {
-    const mks = Array.isArray(polymarketData) && polymarketData.length > 0 ? polymarketData : PLACEHOLDER_MARKETS;
     const groups: Record<string, PolymarketMarket[]> = {
-      americas: [],
-      europe: [],
-      middleeast: [],
-      asia: [],
-      global: [],
+      americas: [], europe: [], middleeast: [], asia: [], global: [],
     };
-    mks.forEach((m) => {
+    markets.forEach((m) => {
       const reg = classifyRegion(m);
       if (groups[reg]) groups[reg].push(m);
     });
     return groups;
-  }, [polymarketData]);
-  const markets = Array.isArray(polymarketData) && polymarketData.length > 0 ? polymarketData : PLACEHOLDER_MARKETS;
+  }, [markets]);
 
   async function handleExpand(item: NewsItem) {
     if (expandedNews === item.id) {
@@ -568,11 +458,16 @@ export default function Geopolitics() {
       return;
     }
     setExpandedNews(item.id);
-    if (!analyses[item.id]) {
+    if (!analyses[item.id] && !analysisErrors[item.id]) {
       setLoadingAnalysis((prev) => ({ ...prev, [item.id]: true }));
       try {
         const analysis = await fetchGeoImpact(item);
         setAnalyses((prev) => ({ ...prev, [item.id]: analysis }));
+      } catch (err) {
+        setAnalysisErrors((prev) => ({
+          ...prev,
+          [item.id]: err instanceof Error ? err.message : "Analysis unavailable",
+        }));
       } finally {
         setLoadingAnalysis((prev) => ({ ...prev, [item.id]: false }));
       }
@@ -586,32 +481,105 @@ export default function Geopolitics() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="font-display text-[22px] font-700 text-white tracking-tight leading-none">
-            Geopolitical Intel
+          <h1 className="font-display text-[22px] font-700 text-white tracking-tight leading-none flex items-center gap-2">
+            <Telescope className="w-5 h-5 text-primary" />
+            Intelligence
           </h1>
           <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1.5 font-mono">
             <Radio className="w-3 h-3 text-primary animate-pulse" />
-            Live Global Feeds · Polymarket Sentiment
+            Live Global Feeds · Polymarket Sentiment · 60s refresh
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-[10px] font-mono text-muted-foreground/50 text-right leading-relaxed">
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
+            {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
             <br />
             {new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
           </div>
           <div className="px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-              System Nominal
-            </span>
+            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Live</span>
           </div>
         </div>
       </div>
+
+      {/* Error banners */}
+      {(newsError || marketsError) && !isLoading && (
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2">
+          <WifiOff className="w-4 h-4 text-red-400 shrink-0" />
+          <span className="text-[11px] text-red-300">
+            {newsError && marketsError
+              ? "News feeds and Polymarket are currently unreachable."
+              : newsError
+                ? "News feeds temporarily unavailable."
+                : "Polymarket data temporarily unavailable."}
+            {" "}Retrying automatically.
+          </span>
+        </div>
+      )}
+
+      {/* Risk Barometer */}
+      {barometer ? (
+        <Card className={`${barometer.bgColor} ${barometer.borderColor} border overflow-hidden relative`}>
+          <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-30 -translate-y-1/2 translate-x-1/2"
+            style={{ background: barometer.score >= 72 ? "#ef4444" : barometer.score >= 50 ? "#f97316" : barometer.score >= 25 ? "#eab308" : "#10b981" }}
+          />
+          <CardContent className="p-4 relative">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Shield className={`w-4 h-4 ${barometer.color}`} />
+                <h3 className="text-[11px] font-bold text-white uppercase tracking-wider">
+                  Global Risk Barometer
+                </h3>
+              </div>
+              <div className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${barometer.bgColor} ${barometer.color} ${barometer.borderColor}`}>
+                {barometer.level}
+              </div>
+            </div>
+
+            <div className="flex items-end gap-4 mb-3">
+              <div className={`text-[32px] font-mono font-bold leading-none ${barometer.color}`}>
+                {barometer.score}
+              </div>
+              <div className="text-[10px] text-muted-foreground font-mono pb-1">/ 100</div>
+              <div className="flex-1 pb-2">
+                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-1000"
+                    style={{
+                      width: `${barometer.score}%`,
+                      background: barometer.score >= 72
+                        ? "linear-gradient(90deg, #f97316, #ef4444)"
+                        : barometer.score >= 50
+                          ? "linear-gradient(90deg, #eab308, #f97316)"
+                          : barometer.score >= 25
+                            ? "linear-gradient(90deg, #10b981, #eab308)"
+                            : "linear-gradient(90deg, #10b981, #34d399)",
+                      boxShadow: `0 0 10px ${barometer.score >= 72 ? "rgba(239,68,68,0.5)" : barometer.score >= 50 ? "rgba(249,115,22,0.4)" : "rgba(16,185,129,0.4)"}`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {barometer.drivers.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest mb-1.5">
+                  Key Drivers
+                </div>
+                {barometer.drivers.slice(0, 3).map((d, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <div className={`w-1 h-1 rounded-full mt-1.5 shrink-0 ${barometer.color}`} />
+                    <span className="text-[10px] text-muted-foreground leading-snug">{d}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : isLoading ? (
+        <div className="h-32 rounded-xl bg-white/[0.03] animate-pulse" />
+      ) : null}
 
       {/* Region Selector */}
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
@@ -642,15 +610,24 @@ export default function Geopolitics() {
               </h2>
             </div>
             <span className="text-[10px] font-mono text-muted-foreground">
-              {filteredNews.length} events detected
+              {filteredNews.length > 0
+                ? `${filteredNews.length} events`
+                : isLoading
+                  ? "loading…"
+                  : "0 events"}
             </span>
           </div>
 
-          {isLoading ? (
+          {loadingNews && newsItems.length === 0 ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="h-32 rounded-xl bg-white/[0.03] animate-pulse" />
               ))}
+            </div>
+          ) : newsError && newsItems.length === 0 ? (
+            <div className="py-16 text-center border border-dashed border-red-500/20 rounded-2xl bg-red-500/5">
+              <WifiOff className="w-8 h-8 text-red-400/40 mx-auto mb-3" />
+              <p className="text-sm text-red-300/60">News feeds unavailable. Retrying…</p>
             </div>
           ) : filteredNews.length === 0 ? (
             <div className="py-20 text-center border border-dashed border-white/10 rounded-2xl bg-white/[0.01]">
@@ -694,9 +671,7 @@ export default function Geopolitics() {
                               </span>
                               <span className="text-[10px] text-muted-foreground/40">•</span>
                               <span className="text-[10px] font-mono text-muted-foreground">
-                                {formatDistanceToNow(new Date(item.publishedAt), {
-                                  addSuffix: true,
-                                })}
+                                {formatDistanceToNow(new Date(item.publishedAt), { addSuffix: true })}
                               </span>
                             </div>
                             {item.isBreaking && (
@@ -708,6 +683,20 @@ export default function Geopolitics() {
                           <h3 className="text-[14px] font-semibold text-white leading-tight group-hover:text-primary/90 transition-colors">
                             {item.title}
                           </h3>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded uppercase ${
+                              item.sentiment === "bullish"
+                                ? "bg-emerald-500/10 text-emerald-400"
+                                : item.sentiment === "bearish"
+                                  ? "bg-red-500/10 text-red-400"
+                                  : "bg-white/5 text-muted-foreground"
+                            }`}>
+                              {item.sentiment}
+                            </span>
+                            <span className="text-[9px] font-mono text-muted-foreground/50 uppercase">
+                              {item.category}
+                            </span>
+                          </div>
                         </div>
                         <div className="mt-1">
                           {expandedNews === item.id ? (
@@ -730,12 +719,17 @@ export default function Geopolitics() {
                           <div className="py-8 flex flex-col items-center justify-center gap-3 bg-black/20 rounded-xl border border-white/[0.04]">
                             <Loader2 className="w-5 h-5 text-primary animate-spin" />
                             <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-widest">
-                              Analyzing Global Impact...
+                              Analyzing Global Impact…
+                            </span>
+                          </div>
+                        ) : analysisErrors[item.id] ? (
+                          <div className="py-6 text-center bg-black/20 rounded-xl border border-white/[0.04]">
+                            <span className="text-[11px] text-muted-foreground/60">
+                              Impact analysis unavailable for this item.
                             </span>
                           </div>
                         ) : analyses[item.id] ? (
                           <div className="space-y-4">
-                            {/* Analysis Header */}
                             <div className="grid grid-cols-2 gap-3">
                               <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                                 <div className="text-[10px] font-mono text-muted-foreground uppercase mb-1">
@@ -743,9 +737,7 @@ export default function Geopolitics() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   {getThreatConfig(analyses[item.id].type).icon}
-                                  <span
-                                    className={`text-xs font-bold uppercase ${getThreatConfig(analyses[item.id].type).color}`}
-                                  >
+                                  <span className={`text-xs font-bold uppercase ${getThreatConfig(analyses[item.id].type).color}`}>
                                     {analyses[item.id].label}
                                   </span>
                                 </div>
@@ -755,19 +747,14 @@ export default function Geopolitics() {
                                   Severity
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <div
-                                    className={`w-1.5 h-1.5 rounded-full ${getSeverityConfig(analyses[item.id].severity).bg} ${getSeverityConfig(analyses[item.id].severity).color}`}
-                                  />
-                                  <span
-                                    className={`text-xs font-bold uppercase ${getSeverityConfig(analyses[item.id].severity).color}`}
-                                  >
+                                  <div className={`w-1.5 h-1.5 rounded-full ${getSeverityConfig(analyses[item.id].severity).bg}`} />
+                                  <span className={`text-xs font-bold uppercase ${getSeverityConfig(analyses[item.id].severity).color}`}>
                                     {getSeverityConfig(analyses[item.id].severity).label}
                                   </span>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Risk Scores */}
                             <div className="p-4 rounded-xl bg-black/20 border border-white/[0.04] space-y-4">
                               <div className="flex items-center justify-between">
                                 <span className="text-[11px] font-semibold text-white uppercase tracking-wide">
@@ -786,46 +773,28 @@ export default function Geopolitics() {
                                   }}
                                 />
                               </div>
-
                               <div className="grid grid-cols-2 gap-4 pt-2">
                                 <div>
                                   <div className="flex justify-between mb-1">
-                                    <span className="text-[10px] text-muted-foreground uppercase">
-                                      Economic Disruption
-                                    </span>
-                                    <span className="text-[10px] font-mono text-white">
-                                      {analyses[item.id].economicDisruptionRisk}%
-                                    </span>
+                                    <span className="text-[10px] text-muted-foreground uppercase">Economic Disruption</span>
+                                    <span className="text-[10px] font-mono text-white">{analyses[item.id].economicDisruptionRisk}%</span>
                                   </div>
                                   <div className="h-1 w-full bg-white/5 rounded-full">
-                                    <div
-                                      className="h-full bg-amber-500/60 rounded-full"
-                                      style={{
-                                        width: `${analyses[item.id].economicDisruptionRisk}%`,
-                                      }}
-                                    />
+                                    <div className="h-full bg-amber-500/60 rounded-full" style={{ width: `${analyses[item.id].economicDisruptionRisk}%` }} />
                                   </div>
                                 </div>
                                 <div>
                                   <div className="flex justify-between mb-1">
-                                    <span className="text-[10px] text-muted-foreground uppercase">
-                                      Lockdown/Stability
-                                    </span>
-                                    <span className="text-[10px] font-mono text-white">
-                                      {analyses[item.id].lockdownRisk}%
-                                    </span>
+                                    <span className="text-[10px] text-muted-foreground uppercase">Lockdown/Stability</span>
+                                    <span className="text-[10px] font-mono text-white">{analyses[item.id].lockdownRisk}%</span>
                                   </div>
                                   <div className="h-1 w-full bg-white/5 rounded-full">
-                                    <div
-                                      className="h-full bg-red-500/60 rounded-full"
-                                      style={{ width: `${analyses[item.id].lockdownRisk}%` }}
-                                    />
+                                    <div className="h-full bg-red-500/60 rounded-full" style={{ width: `${analyses[item.id].lockdownRisk}%` }} />
                                   </div>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Narrative */}
                             <div className="space-y-2">
                               <div className="flex items-center gap-2">
                                 <Zap className="w-3.5 h-3.5 text-primary" />
@@ -838,23 +807,16 @@ export default function Geopolitics() {
                               </div>
                             </div>
 
-                            {/* Related Markets from Polymarket */}
                             {markets.length > 0 && (
                               <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <BarChart2 className="w-3.5 h-3.5 text-emerald-400" />
-                                    <span className="text-[11px] font-bold text-white uppercase tracking-wider">
-                                      Related Prediction Markets
-                                    </span>
-                                  </div>
+                                <div className="flex items-center gap-2">
+                                  <BarChart2 className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span className="text-[11px] font-bold text-white uppercase tracking-wider">
+                                    Related Prediction Markets
+                                  </span>
                                 </div>
                                 <div className="space-y-1.5">
-                                  {findRelatedMarkets(
-                                    item.title,
-                                    item.description ?? "",
-                                    markets,
-                                  ).map((m) => (
+                                  {findRelatedMarkets(item.title, item.description ?? "", markets).map((m) => (
                                     <div
                                       key={m.id}
                                       className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.06] transition-colors"
@@ -862,54 +824,51 @@ export default function Geopolitics() {
                                       <span className="text-[11px] text-white/80 line-clamp-1 flex-1 pr-4">
                                         {m.question}
                                       </span>
-                                      <div className="flex items-center gap-3 shrink-0">
+                                      <div className="flex items-center gap-2 shrink-0">
                                         <div className="text-right">
-                                          <div
-                                            className={`text-[11px] font-mono font-bold ${riskLevel(m.yesPrice).color}`}
-                                          >
+                                          <div className={`text-[11px] font-mono font-bold ${riskLevel(m.yesPrice).color}`}>
                                             {(m.yesPrice * 100).toFixed(0)}%
                                           </div>
-                                          <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-tighter">
-                                            Yes Prob
-                                          </div>
+                                          <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-tighter">Yes</div>
                                         </div>
-                                        <div
-                                          className={`px-1.5 py-0.5 rounded text-[8px] font-bold border ${riskLevel(m.yesPrice).bg} ${riskLevel(m.yesPrice).color} ${riskLevel(m.yesPrice).border}`}
-                                        >
+                                        {typeof m.oddsShift === "number" && Math.abs(m.oddsShift) > 0.005 && (
+                                          <div className={`flex items-center gap-0.5 text-[9px] font-mono ${m.oddsShift > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                            {m.oddsShift > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+                                            {Math.abs(m.oddsShift * 100).toFixed(1)}%
+                                          </div>
+                                        )}
+                                        <div className={`px-1.5 py-0.5 rounded text-[8px] font-bold border ${riskLevel(m.yesPrice).bg} ${riskLevel(m.yesPrice).color} ${riskLevel(m.yesPrice).border}`}>
                                           {riskLevel(m.yesPrice).label}
                                         </div>
                                       </div>
                                     </div>
                                   ))}
-                                  {findRelatedMarkets(item.title, item.description ?? "", markets)
-                                    .length === 0 && (
+                                  {findRelatedMarkets(item.title, item.description ?? "", markets).length === 0 && (
                                     <div className="text-[10px] text-muted-foreground/50 italic py-2">
-                                      No direct Polymarket correlation found for this specific
-                                      event.
+                                      No direct Polymarket correlation for this event.
                                     </div>
                                   )}
                                 </div>
                               </div>
                             )}
 
-                            {/* Footer Links */}
                             <div className="flex items-center justify-between pt-2">
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-mono text-muted-foreground uppercase">
-                                  Horizon:
-                                </span>
+                                <span className="text-[10px] font-mono text-muted-foreground uppercase">Horizon:</span>
                                 <span className="text-[10px] font-mono text-white bg-white/5 px-1.5 py-0.5 rounded">
                                   {analyses[item.id].timeHorizon}
                                 </span>
                               </div>
-                              <a
-                                href={item.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[10px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 uppercase tracking-widest transition-colors"
-                              >
-                                View Source <ExternalLink className="w-2.5 h-2.5" />
-                              </a>
+                              {item.url && item.url !== "#" && (
+                                <a
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 uppercase tracking-widest transition-colors"
+                                >
+                                  View Source <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              )}
                             </div>
                           </div>
                         ) : null}
@@ -922,7 +881,7 @@ export default function Geopolitics() {
           )}
         </div>
 
-        {/* Right Column: Polymarket Overview */}
+        {/* Right Column: Prediction Markets */}
         <div className="lg:col-span-5 space-y-6">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
@@ -933,19 +892,23 @@ export default function Geopolitics() {
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-mono text-muted-foreground uppercase">Live</span>
+              <span className="text-[10px] font-mono text-muted-foreground uppercase">Polymarket</span>
             </div>
           </div>
 
-          {isLoading ? (
+          {loadingMarkets && markets.length === 0 ? (
             <div className="space-y-4">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="h-24 rounded-xl bg-white/[0.03] animate-pulse" />
               ))}
             </div>
+          ) : marketsError && markets.length === 0 ? (
+            <div className="py-16 text-center border border-dashed border-red-500/20 rounded-2xl bg-red-500/5">
+              <WifiOff className="w-8 h-8 text-red-400/40 mx-auto mb-3" />
+              <p className="text-sm text-red-300/60">Polymarket unavailable. Retrying…</p>
+            </div>
           ) : (
             <div className="space-y-6">
-              {/* Region-specific markets */}
               {Object.entries(marketByRegion)
                 .filter(
                   ([key, list]) =>
@@ -954,9 +917,9 @@ export default function Geopolitics() {
                 .map(([region, list]) => (
                   <div key={region} className="space-y-3">
                     <div className="flex items-center gap-2 px-1">
-                      <span className="text-xs">{REGION_CONFIG[region].flag}</span>
+                      <span className="text-xs">{REGION_CONFIG[region]?.flag}</span>
                       <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-                        {REGION_CONFIG[region].label}
+                        {REGION_CONFIG[region]?.label}
                       </h3>
                       <div className="flex-1 h-px bg-white/[0.06]" />
                     </div>
@@ -975,15 +938,25 @@ export default function Geopolitics() {
                                   {m.question}
                                 </h4>
                                 <div className="text-right shrink-0">
-                                  <div
-                                    className={`text-[15px] font-mono font-bold leading-none ${riskLevel(m.yesPrice).color}`}
-                                  >
+                                  <div className={`text-[15px] font-mono font-bold leading-none ${riskLevel(m.yesPrice).color}`}>
                                     {(m.yesPrice * 100).toFixed(0)}%
                                   </div>
                                   <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-tighter mt-1">
                                     Yes Odds
                                   </div>
                                 </div>
+                              </div>
+
+                              {/* Odds bar */}
+                              <div className="flex h-1 rounded-full overflow-hidden mb-3 gap-px">
+                                <div
+                                  className="bg-emerald-500/60 rounded-l-full transition-all duration-700"
+                                  style={{ width: `${m.yesPrice * 100}%` }}
+                                />
+                                <div
+                                  className="bg-red-500/40 rounded-r-full transition-all duration-700"
+                                  style={{ width: `${m.noPrice * 100}%` }}
+                                />
                               </div>
 
                               <div className="flex items-center justify-between">
@@ -1007,10 +980,8 @@ export default function Geopolitics() {
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                  {typeof m.oddsShift === "number" && m.oddsShift !== 0 && (
-                                    <div
-                                      className={`flex items-center gap-0.5 text-[9px] font-mono ${m.oddsShift > 0 ? "text-emerald-400" : "text-red-400"}`}
-                                    >
+                                  {typeof m.oddsShift === "number" && m.oddsShift !== 0 && Math.abs(m.oddsShift) > 0.005 && (
+                                    <div className={`flex items-center gap-0.5 text-[9px] font-mono ${m.oddsShift > 0 ? "text-emerald-400" : "text-red-400"}`}>
                                       {m.oddsShift > 0 ? (
                                         <TrendingUp className="w-2.5 h-2.5" />
                                       ) : (
@@ -1020,7 +991,7 @@ export default function Geopolitics() {
                                     </div>
                                   )}
                                   <div className="px-1.5 py-0.5 rounded-[4px] bg-white/[0.05] border border-white/[0.08] text-[8px] font-mono text-muted-foreground">
-                                    ${((m.volume ?? 0) / 1000000).toFixed(1)}M Vol
+                                    ${((m.volume ?? 0) / 1_000_000).toFixed(1)}M Vol
                                   </div>
                                 </div>
                               </div>
@@ -1031,57 +1002,16 @@ export default function Geopolitics() {
                     </div>
                   </div>
                 ))}
+
+              {markets.length > 0 &&
+                Object.values(marketByRegion).every((l) => l.length === 0) && (
+                  <div className="py-16 text-center border border-dashed border-white/10 rounded-2xl">
+                    <Radar className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">No markets in this region</p>
+                  </div>
+                )}
             </div>
           )}
-
-          {/* Global Indicators */}
-          <Card className="bg-primary/5 border-primary/20 overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <CardContent className="p-4 relative">
-              <div className="flex items-center gap-2 mb-4">
-                <Shield className="w-4 h-4 text-primary" />
-                <h3 className="text-[11px] font-bold text-white uppercase tracking-wider">
-                  Systemic Risk Outlook
-                </h3>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="text-[10px] text-muted-foreground uppercase">
-                      Geopolitical Tension Index
-                    </div>
-                    <div className="text-lg font-mono font-bold text-white">74.2</div>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <div className="text-[10px] text-muted-foreground uppercase">Status</div>
-                    <div className="text-[10px] font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
-                      ELEVATED
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[9px] font-mono uppercase">
-                    <span className="text-muted-foreground">Market Fragility</span>
-                    <span className="text-primary">Moderate</span>
-                  </div>
-                  <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary/60 w-[58%]" />
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <Button
-                    variant="ghost"
-                    className="w-full h-8 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-white hover:bg-white/5 gap-2"
-                  >
-                    View Full Risk Report <ArrowRight className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
