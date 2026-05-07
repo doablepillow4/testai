@@ -13,10 +13,13 @@ A market intelligence dashboard that aggregates real-time financial data, geopol
 
 **Required env vars:** `DATABASE_URL`, `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` (all set by Replit DB provisioning — no extra keys needed)
 
-**Workflows:**
+**Workflows (platform-managed via artifacts):**
 
-- `API Server` → `PORT=8080 pnpm --filter @workspace/api-server run dev` (waitForPort 8080)
-- `Start application` → `PORT=22203 BASE_PATH=/ pnpm --filter @workspace/hivemind run dev` (waitForPort 22203)
+- `artifacts/api-server: API Server` → `pnpm --filter @workspace/api-server run dev` (port 8080, console)
+- `artifacts/hivemind: web` → `pnpm --filter @workspace/hivemind run dev` (port injected by Replit, webview)
+- `artifacts/mockup-sandbox: Component Preview Server` → `pnpm --filter @workspace/mockup-sandbox run dev`
+
+Note: Replit injects `PORT` and `BASE_PATH` automatically for artifact workflows. Do not add manual `Start application` / `API Server` workflows — they conflict with the artifact-managed ones.
 
 ## Stack
 
