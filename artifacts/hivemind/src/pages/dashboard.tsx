@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetMarketPrices,
@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  AlertCircle,
 } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
@@ -33,13 +34,21 @@ import { TickerCombobox } from "@/components/ticker-combobox";
 import { useAppStore } from "@/store/app-store";
 
 export default function Dashboard() {
-  const { data: prices, isLoading: loadingPrices } = useGetMarketPrices({
+  const {
+    data: prices,
+    isLoading: loadingPrices,
+    error: pricesError,
+  } = useGetMarketPrices({
     query: { refetchInterval: 30000, queryKey: getGetMarketPricesQueryKey() },
   });
-  const { data: predictions, isLoading: loadingPredictions } = useGetPredictions({
+  const {
+    data: predictions,
+    isLoading: loadingPredictions,
+    error: predictionsError,
+  } = useGetPredictions({
     query: { refetchInterval: 30000, queryKey: getGetPredictionsQueryKey() },
   });
-  const { data: summary } = useGetPredictionsSummary({
+  const { data: summary, error: summaryError } = useGetPredictionsSummary({
     query: { refetchInterval: 30000, queryKey: getGetPredictionsSummaryQueryKey() },
   });
 
@@ -59,6 +68,7 @@ export default function Dashboard() {
 
   const priceList = Array.isArray(prices) ? prices : [];
   const predictionList = Array.isArray(predictions) ? predictions : [];
+  const hasApiErrors = Boolean(pricesError || predictionsError || summaryError);
 
   function handleSymbolChange(symbol: string, price?: number) {
     setSelectedSymbol(symbol);
@@ -85,6 +95,20 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 animate-fade-up">
+      {/* API Error Alert */}
+      {hasApiErrors && (
+        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="text-sm font-semibold text-red-300 mb-1">Backend Connection Issue</div>
+            <div className="text-xs text-red-200/80">
+              The API server is currently unavailable. Displaying cached data when available. Ensure
+              the backend is configured with a PostgreSQL database.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex items-start justify-between">
         <div>

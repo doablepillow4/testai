@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { predictionsTable } from "@workspace/db";
-import { desc, isNull, isNotNull } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import {
   GetPredictionsResponse,
   CreatePredictionBody,
@@ -109,7 +109,18 @@ router.get("/predictions/export", async (_req, res): Promise<void> => {
       .limit(500);
 
     const rows = [
-      ["id", "symbol", "direction", "currentPrice", "targetPrice", "confidence", "timeframe", "outcome", "createdAt", "resolvedAt"].join(","),
+      [
+        "id",
+        "symbol",
+        "direction",
+        "currentPrice",
+        "targetPrice",
+        "confidence",
+        "timeframe",
+        "outcome",
+        "createdAt",
+        "resolvedAt",
+      ].join(","),
       ...all.map((p) =>
         [
           p.id,
@@ -129,7 +140,7 @@ router.get("/predictions/export", async (_req, res): Promise<void> => {
     res.setHeader("Content-Type", "text/csv");
     res.setHeader("Content-Disposition", "attachment; filename=hivemind-predictions.csv");
     res.send(rows);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Export failed" });
   }
 });

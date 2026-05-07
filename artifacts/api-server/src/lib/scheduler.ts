@@ -2,12 +2,8 @@ import { db } from "@workspace/db";
 import { predictionsTable, agentStatesTable } from "@workspace/db";
 import { isNull, eq } from "drizzle-orm";
 import { logger } from "./logger";
-import { resolveExpiredPredictions, getPredictionsSummary } from "./predictions-engine";
-import {
-  fetchStockPrice,
-  fetchCryptoPrices,
-  CRYPTO_ID_MAP,
-} from "./market-data";
+import { resolveExpiredPredictions } from "./predictions-engine";
+import { fetchStockPrice, fetchCryptoPrices, CRYPTO_ID_MAP } from "./market-data";
 import { getAllAgentStates, getStaticAgentStates } from "./lattice/lattice-engine";
 
 export interface TrainingCycleResult {
@@ -74,16 +70,8 @@ export async function runTrainingCycle(): Promise<TrainingCycleResult> {
 
   // 4. Reload resolved outcomes for Brier-score computation
   const [resolved, incorrect] = await Promise.all([
-    db
-      .select()
-      .from(predictionsTable)
-      .where(eq(predictionsTable.outcome, "correct"))
-      .limit(200),
-    db
-      .select()
-      .from(predictionsTable)
-      .where(eq(predictionsTable.outcome, "incorrect"))
-      .limit(200),
+    db.select().from(predictionsTable).where(eq(predictionsTable.outcome, "correct")).limit(200),
+    db.select().from(predictionsTable).where(eq(predictionsTable.outcome, "incorrect")).limit(200),
   ]);
 
   const resolvedCount = resolved.length + incorrect.length;

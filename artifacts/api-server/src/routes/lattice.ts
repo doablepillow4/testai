@@ -15,19 +15,12 @@ import {
 import { runLattice, getAllAgentStates, getStaticAgentStates } from "../lib/lattice/lattice-engine";
 import { queryBeliefHistory } from "../lib/lattice/belief-state";
 import { detectRegime, describeRegime } from "../lib/lattice/regime-detector";
-import {
-  fetchStockHistory,
-  fetchCryptoHistory,
-  CRYPTO_ID_MAP,
-} from "../lib/market-data";
+import { fetchStockHistory, fetchCryptoHistory, CRYPTO_ID_MAP } from "../lib/market-data";
 import { db } from "@workspace/db";
-import { predictionsTable, latticeRunsTable, agentStatesTable } from "@workspace/db";
-import { isNull, eq, desc } from "drizzle-orm";
+import { latticeRunsTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 import { runTrainingCycle } from "../lib/scheduler";
-import {
-  getGeoMarketsForAsset,
-  buildPolymarketHeadline,
-} from "../lib/polymarket-cache";
+import { getGeoMarketsForAsset, buildPolymarketHeadline } from "../lib/polymarket-cache";
 import { fetchPolymarketData, getFallbackMarkets } from "./polymarket";
 import { logger } from "../lib/logger";
 import { latticeCache, TTL } from "../lib/cache";
