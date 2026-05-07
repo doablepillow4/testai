@@ -1,0 +1,53 @@
+You are an expert full-stack TypeScript engineer optimizing the Hivemind Predictor project (github.com/doablepillow4/testai) running on free Replit tier. Goal: Keep everything zero-cost, minimize CPU/memory usage especially for the Lattice engine, fix existing bugs, and implement requested features. Never add paid APIs, OpenAI keys, or external services that cost money. Use free/public endpoints only with aggressive caching and fallbacks.
+
+### CRITICAL FIXES (do these first)
+1. **Geopolitics tab not working** — Debug and fully fix the Geopolitics page/route (news feed, risk barometer, Polymarket integration). Ensure /api/news and /api/geo* endpoints return valid data. Add robust error handling and fallback static content if external sources fail. Make sure the tab loads without errors in the React frontend.
+
+2. **Prediction price inaccuracy** — Fix the target price logic in the Lattice engine and predictions-engine.ts. Current prices (e.g., stock at ~85) should not generate unrealistic targets like 180 for bearish scenarios. Normalize targets relative to current price (e.g., use percentage moves, ATR-based ranges, or regime-aware scaling). Update hypothesis agents and synthesis to output realistic price targets anchored to current market data.
+
+### OPTIMIZATIONS - Make Lattice as cheap as possible on free Replit
+- Reduce default agent count, critique rounds, or Monte Carlo iterations (make configurable, default to lightweight: 2-3 agents, 1 critique round).
+- Add aggressive in-memory + DB caching for market data, regime detection, and previous lattice runs (expire after 5-15 mins).
+- Shorten token/context in any internal logic; prefer deterministic math/rules over heavy computation.
+- Add rate limiting and concurrency controls so the engine doesn't spike Replit resources.
+- Profile and optimize hot paths in lattice/ folder. Set LOG_LEVEL=info by default.
+
+### NEW FEATURES to implement (integrate cleanly, maintain contract-first OpenAPI approach):
+2. **Backtesting & Historical Performance**
+   - Add endpoint and UI for historical replay of Lattice predictions vs actual outcomes.
+   - Show agent accuracy, Brier scores over time, and calibration metrics.
+   - Support date range selection for major past events.
+
+3. **Advanced Visualization**
+   - Interactive charts: probability distributions from Monte Carlo, belief convergence graphs (simple Recharts or canvas-based to keep light).
+   - Geopolitical risk heatmap or simple world map visualization (use free SVG or lightweight library).
+
+4. **LLM Integration Layer (zero-cost)**
+   - Optional lightweight deterministic "LLM-like" layer using rule-based templates + simple keyword/embedding-free logic (no external calls). Make it toggleable and off by default for cost/performance.
+
+7. **More Data Sources**
+   - Add 1-2 additional free sources (e.g., more Yahoo Finance fields, fallback public RSS/news, or basic economic indicators via free endpoints). Enhance existing with better caching.
+
+8. **ML/Quant Enhancements**
+   - Add more technical indicators (if missing) and lightweight regime-specific logic. Hybrid with existing agent lattice. Keep purely JS/TS math-based (no heavy ML libs that increase bundle size).
+
+10. **UI/UX Polish**
+    - Improve mobile responsiveness.
+    - Add loading skeletons, better error states, dark/light toggle if missing.
+    - Onboarding hints or tooltips for new features.
+    - Ensure Geopolitics and new viz pages are polished.
+
+11. **Evaluation & Transparency**
+    - Public agent reputation leaderboard.
+    - Calibration plots and downloadable summary CSV/JSON for predictions.
+    - Display Brier scores clearly.
+
+### Technical Constraints (Replit free tier)
+- Stick to existing stack: pnpm monorepo, Drizzle/Postgres (Replit DB), React 19, Express, etc.
+- Update OpenAPI spec first, then regenerate clients.
+- Keep everything lightweight — test performance after changes.
+- Preserve all existing fallback data mechanisms.
+- Add tests for new fixes/features where reasonable.
+- Maintain clean architecture and TypeScript strictness.
+
+Run the full flow: update schema if needed, regenerate code, test API + frontend. Provide a summary of changes made, especially fixes for the two bugs and performance improvements. Suggest next steps for further optimization if needed.
