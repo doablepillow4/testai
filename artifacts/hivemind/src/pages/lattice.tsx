@@ -877,7 +877,9 @@ function PerformancePanel({ symbol }: { symbol: string }) {
                 const h = Math.floor(ms / 3_600_000);
                 const m = Math.floor((ms % 3_600_000) / 60_000);
                 timeAgo = h > 0 ? `${h}h ${m}m ago` : `${m}m ago`;
-              } catch {}
+              } catch {
+                timeAgo = "—";
+              }
 
               return (
                 <div
@@ -1267,7 +1269,7 @@ function PolymarketIntelPanel({ intel }: { intel: NonNullable<LatticeResult["pol
                     >
                       {pct}%
                     </div>
-                    {shift !== null && Math.abs(shift) > 0.005 && (
+                    {typeof shift === "number" && Math.abs(shift) > 0.005 && (
                       <div
                         className={`text-[9px] font-mono ${shift > 0 ? "text-red-400" : "text-emerald-400"}`}
                       >
@@ -1713,7 +1715,7 @@ export default function Lattice() {
   function handleRun() {
     if (!symbol) return;
     resetUpvotes();
-    runLattice.mutate({ data: { symbol, timeframe, useV3: true } });
+    runLattice.mutate({ data: { symbol, timeframe } });
   }
 
   const DEBATE_AGENTS = [
