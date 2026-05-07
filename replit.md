@@ -15,11 +15,11 @@ A market intelligence dashboard that aggregates real-time financial data, geopol
 
 **Workflows (defined in `.replit`, auto-start on import from GitHub):**
 
-- `API Server` → `pnpm install --frozen-lockfile && pnpm --filter @workspace/db run push && PORT=8080 pnpm --filter @workspace/api-server run dev` (port 8080, console)
+- `API Server` → `$REPLIT_ARTIFACT_ROUTER` — starts api-server on port 8080 and serves the built frontend as static files; routes `/api` to the api-server and `/` to `artifacts/hivemind/dist/public` (port 8000, console)
 - `Start application` → `pnpm install --frozen-lockfile && PORT=5000 BASE_PATH=/ pnpm --filter @workspace/hivemind run dev` (port 5000, webview)
 - Both run in parallel under the `Project` parent workflow (the Run button)
 
-Note: Each workflow installs deps and pushes the DB schema on startup, so importing from GitHub and clicking Run is all that's needed.
+Note: `Start application` installs deps on startup (takes ~2 s). `API Server` uses the pre-built frontend (run `pnpm --filter @workspace/hivemind run build` to rebuild after code changes).
 
 ## Stack
 
@@ -86,11 +86,13 @@ _Populate as you build_
 
 ## Gotchas
 
-- `vite.config.ts` requires both `PORT` and `BASE_PATH` env vars at startup — missing either throws immediately
+- `vite.config.ts` — PORT/BASE_PATH are optional (default 5000 and "/"); `--host` CLI flag removed from package.json so the config's `host: "::"` (dual-stack IPv4+IPv6) applies
 - `api-server/src/index.ts` requires `PORT` env var — missing it throws immediately
 - The mockup-sandbox is a separate Vite app for component previewing; it is not part of the main app
 - `minimumReleaseAge: 1440` in pnpm-workspace.yaml blocks packages < 1 day old (except `@replit/*`)
 - Scheduler uses `timer.unref()` so it never prevents the process from exiting; set `SCHEDULER_INTERVAL_MS` (ms) to override the 15-minute default
+- **Replit proxy routing** — Replit's `pid1` proxy reads `artifacts/hivemind/.replit-artifact/artifact.toml` to route `/` to `localPort`. That port MUST match where Vite runs (currently 5000). Mismatch → 502 for all page loads. Also, Vite must bind on `"::"` (IPv6 wildcard) because pid1 may connect via IPv6 loopback.
+- **External URL routing chain**: `pid1:80` → reads artifact.toml → `/api/*` → api-server:8080; `/` → Vite:5000 (dev) or static files via artifact-router:8000 (prod)
 
 ## Pointers
 
