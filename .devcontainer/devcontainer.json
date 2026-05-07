@@ -1,0 +1,21 @@
+{
+  "name": "Hivemind Predictor (testai)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/postgresql:1": {}
+  },
+  "forwardPorts": [5173, 8080, 5432],
+  "postCreateCommand": "pnpm install",
+  "postStartCommand": "echo '✅ Codespace ready! Use Terminal to run: pnpm dev:all (if available) or start backend + frontend manually'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-typescript-next"
+      ]
+    }
+  }
+}
