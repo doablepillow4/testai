@@ -41,18 +41,18 @@ function makeSparkline(base: number, len = 15): number[] {
 }
 
 const PLACEHOLDER_PRICES: MarketPrice[] = [
-  { symbol: "BTC", name: "Bitcoin", price: 97500, change: 1220, changePercent: 1.27, volume: 28_400_000_000, marketCap: 1_920_000_000_000, type: "crypto", sparkline: makeSparkline(97500), updatedAt: new Date().toISOString() },
-  { symbol: "ETH", name: "Ethereum", price: 1875, change: -18, changePercent: -0.95, volume: 13_200_000_000, marketCap: 225_000_000_000, type: "crypto", sparkline: makeSparkline(1875), updatedAt: new Date().toISOString() },
-  { symbol: "SOL", name: "Solana", price: 148, change: 3.2, changePercent: 2.21, volume: 4_100_000_000, marketCap: 68_000_000_000, type: "crypto", sparkline: makeSparkline(148), updatedAt: new Date().toISOString() },
-  { symbol: "BNB", name: "BNB", price: 598, change: -4.5, changePercent: -0.75, volume: 1_800_000_000, marketCap: 86_000_000_000, type: "crypto", sparkline: makeSparkline(598), updatedAt: new Date().toISOString() },
-  { symbol: "DOGE", name: "Dogecoin", price: 0.178, change: 0.004, changePercent: 2.3, volume: 1_200_000_000, marketCap: 26_000_000_000, type: "crypto", sparkline: makeSparkline(0.178), updatedAt: new Date().toISOString() },
-  { symbol: "AVAX", name: "Avalanche", price: 22.5, change: -0.6, changePercent: -2.6, volume: 420_000_000, marketCap: 9_400_000_000, type: "crypto", sparkline: makeSparkline(22.5), updatedAt: new Date().toISOString() },
-  { symbol: "AAPL", name: "Apple Inc", price: 213.4, change: 1.8, changePercent: 0.85, volume: 54_000_000, marketCap: 3_280_000_000_000, type: "stock", sparkline: makeSparkline(213.4), updatedAt: new Date().toISOString() },
-  { symbol: "MSFT", name: "Microsoft", price: 418.2, change: -2.4, changePercent: -0.57, volume: 22_000_000, marketCap: 3_100_000_000_000, type: "stock", sparkline: makeSparkline(418.2), updatedAt: new Date().toISOString() },
-  { symbol: "NVDA", name: "NVIDIA", price: 876.3, change: 18.4, changePercent: 2.14, volume: 48_000_000, marketCap: 2_160_000_000_000, type: "stock", sparkline: makeSparkline(876.3), updatedAt: new Date().toISOString() },
-  { symbol: "TSLA", name: "Tesla", price: 174.6, change: -3.9, changePercent: -2.18, volume: 87_000_000, marketCap: 556_000_000_000, type: "stock", sparkline: makeSparkline(174.6), updatedAt: new Date().toISOString() },
-  { symbol: "AMZN", name: "Amazon", price: 196.8, change: 0.9, changePercent: 0.46, volume: 31_000_000, marketCap: 2_070_000_000_000, type: "stock", sparkline: makeSparkline(196.8), updatedAt: new Date().toISOString() },
-  { symbol: "GOOGL", name: "Alphabet", price: 168.5, change: 1.2, changePercent: 0.72, volume: 19_000_000, marketCap: 2_080_000_000_000, type: "stock", sparkline: makeSparkline(168.5), updatedAt: new Date().toISOString() },
+  { symbol: "BTC", name: "Bitcoin", price: 81000, change: -620, changePercent: -0.76, volume: 28_400_000_000, marketCap: 1_600_000_000_000, type: "crypto", sparkline: makeSparkline(81000), updatedAt: new Date().toISOString() },
+  { symbol: "ETH", name: "Ethereum", price: 2330, change: -22, changePercent: -0.93, volume: 13_200_000_000, marketCap: 280_000_000_000, type: "crypto", sparkline: makeSparkline(2330), updatedAt: new Date().toISOString() },
+  { symbol: "SOL", name: "Solana", price: 89, change: 1.8, changePercent: 2.06, volume: 4_100_000_000, marketCap: 45_000_000_000, type: "crypto", sparkline: makeSparkline(89), updatedAt: new Date().toISOString() },
+  { symbol: "BNB", name: "BNB", price: 649, change: -4.1, changePercent: -0.63, volume: 1_800_000_000, marketCap: 91_000_000_000, type: "crypto", sparkline: makeSparkline(649), updatedAt: new Date().toISOString() },
+  { symbol: "DOGE", name: "Dogecoin", price: 0.168, change: 0.003, changePercent: 1.8, volume: 1_200_000_000, marketCap: 24_000_000_000, type: "crypto", sparkline: makeSparkline(0.168), updatedAt: new Date().toISOString() },
+  { symbol: "AVAX", name: "Avalanche", price: 19.4, change: -0.5, changePercent: -2.5, volume: 420_000_000, marketCap: 8_000_000_000, type: "crypto", sparkline: makeSparkline(19.4), updatedAt: new Date().toISOString() },
+  { symbol: "AAPL", name: "Apple Inc", price: 198.5, change: 2.1, changePercent: 1.07, volume: 54_000_000, marketCap: 2_980_000_000_000, type: "stock", sparkline: makeSparkline(198.5), updatedAt: new Date().toISOString() },
+  { symbol: "MSFT", name: "Microsoft", price: 392.0, change: -1.8, changePercent: -0.46, volume: 22_000_000, marketCap: 2_910_000_000_000, type: "stock", sparkline: makeSparkline(392.0), updatedAt: new Date().toISOString() },
+  { symbol: "NVDA", name: "NVIDIA", price: 109.0, change: 3.2, changePercent: 3.02, volume: 48_000_000, marketCap: 2_660_000_000_000, type: "stock", sparkline: makeSparkline(109.0), updatedAt: new Date().toISOString() },
+  { symbol: "TSLA", name: "Tesla", price: 278.0, change: -5.4, changePercent: -1.9, volume: 87_000_000, marketCap: 893_000_000_000, type: "stock", sparkline: makeSparkline(278.0), updatedAt: new Date().toISOString() },
+  { symbol: "AMZN", name: "Amazon", price: 193.0, change: 1.1, changePercent: 0.57, volume: 31_000_000, marketCap: 2_040_000_000_000, type: "stock", sparkline: makeSparkline(193.0), updatedAt: new Date().toISOString() },
+  { symbol: "GOOGL", name: "Alphabet", price: 163.0, change: 0.9, changePercent: 0.56, volume: 19_000_000, marketCap: 1_980_000_000_000, type: "stock", sparkline: makeSparkline(163.0), updatedAt: new Date().toISOString() },
 ];
 
 const PLACEHOLDER_SUMMARY: PredictionsSummary = {

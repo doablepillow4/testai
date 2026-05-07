@@ -594,7 +594,16 @@ export default function Geopolitics() {
             Live Global Feeds · Polymarket Sentiment
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="text-[10px] font-mono text-muted-foreground/50 text-right leading-relaxed">
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+            })}
+            <br />
+            {new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+          </div>
           <div className="px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
             <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">

@@ -296,8 +296,9 @@ export async function runLattice(
 
   const critiqueTokens = [...devilResult.tokens];
 
+  let tailResult: ReturnType<typeof runTailRiskAgent> | undefined;
   if (regime.regime === "crisis") {
-    const tailResult = runTailRiskAgent(
+    tailResult = runTailRiskAgent(
       devilResult.adjustedProb,
       hive,
       regime,
@@ -378,7 +379,7 @@ export async function runLattice(
     synthesis.token,
     meta.token,
   ];
-  const allDebateRounds = [...devilResult.rounds, ...tailResult.rounds];
+  const allDebateRounds = [...devilResult.rounds, ...(tailResult?.rounds ?? [])];
 
   // ─── v3: Compute belief dynamics and enrich tokens ────────────────────────
   let beliefDynamics: BeliefDynamics | undefined;
