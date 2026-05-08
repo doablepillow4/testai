@@ -1,6 +1,19 @@
 import React from 'react';
+import { useGetMarketPrices } from '@workspace/api-client-react';
 
 export default function Dashboard() {
+  const { data: prices, isLoading, error } = useGetMarketPrices();
+
+  // Debug error for development
+  React.useEffect(() => {
+    if (error) {
+      console.error('Market prices error:', error);
+    }
+  }, [error]);
+
+  const btcPrice = prices?.find(p => p.symbol === 'BTC')?.price;
+  const ethPrice = prices?.find(p => p.symbol === 'ETH')?.price;
+
   return (
     <div className="p-6 space-y-8">
       <div>
@@ -12,8 +25,17 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-card p-6 rounded-xl border">
           <h3 className="text-sm text-muted-foreground">BTC</h3>
-          <div className="text-3xl font-mono font-semibold">$67,420</div>
-          <div className="text-green-500 text-sm">+2.4%</div>
+          <div className="text-3xl font-mono font-semibold">
+            {isLoading ? '...' : error ? 'Error' : `$${btcPrice?.toLocaleString() || 'N/A'}`}
+          </div>
+          <div className="text-green-500 text-sm">Live</div>
+        </div>
+        <div className="bg-card p-6 rounded-xl border">
+          <h3 className="text-sm text-muted-foreground">ETH</h3>
+          <div className="text-3xl font-mono font-semibold">
+            {isLoading ? '...' : error ? 'Error' : `$${ethPrice?.toLocaleString() || 'N/A'}`}
+          </div>
+          <div className="text-green-500 text-sm">Live</div>
         </div>
         {/* Add more cards similarly */}
       </div>

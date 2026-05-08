@@ -47,7 +47,7 @@ export default defineConfig({
   server: {
     port,
     strictPort: true,
-    host: "::",
+    host: true,
     allowedHosts: true,
     fs: {
       strict: true,
@@ -56,6 +56,8 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:8080",
         changeOrigin: true,
+        rewrite: (path) => path,
+        ws: true,
       },
     },
   },
