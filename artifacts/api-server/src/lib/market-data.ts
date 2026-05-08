@@ -36,19 +36,16 @@ export function sanitizeSparkline(values: (number | null | undefined)[]): number
 }
 
 export async function fetchStockPrice(symbol: string) {
-  const cacheKey = `stock:price:${symbol}`;
-  const cached = marketCache.get<Awaited<ReturnType<typeof _fetchStockPriceRaw>>>(cacheKey);
-  if (cached) return cached;
-  const result = await _fetchStockPriceRaw(symbol);
-  marketCache.set(cacheKey, result, TTL.MARKET_PRICE);
-  return result;
+  return getOrFetch(marketCache, `stock:price:${symbol}`, TTL.MARKET_PRICE, () =>
+    _fetchStockPriceRaw(symbol),
+  );
 }
 
 async function _fetchStockPriceRaw(symbol: string) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=30d`;
   const res = await fetch(url, {
     headers: { "User-Agent": "Mozilla/5.0" },
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`Yahoo Finance error: ${res.status} for ${symbol}`);
   const json = (await res.json()) as {
@@ -109,7 +106,7 @@ export async function fetchCryptoPrices() {
     const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&sparkline=true&price_change_percentage=24h&order=market_cap_desc`;
     const res = await fetch(url, {
       headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) throw new Error(`CoinGecko error: ${res.status}`);
     const data = (await res.json()) as Array<{

@@ -29,42 +29,14 @@ const FEED_SOURCES = [
 ];
 
 const BEARISH_KW = [
-  "war",
-  "attack",
-  "conflict",
-  "crisis",
-  "crash",
-  "collapse",
-  "sanction",
-  "threat",
-  "explosion",
-  "missile",
-  "airstrike",
-  "troops",
-  "invasion",
-  "escalat",
-  "recession",
-  "default",
-  "ban",
-  "restrict",
-  "shooting",
-  "assassination",
-  "coup",
+  "war", "attack", "conflict", "crisis", "crash", "collapse", "sanction",
+  "threat", "explosion", "missile", "airstrike", "troops", "invasion",
+  "escalat", "recession", "default", "ban", "restrict", "shooting",
+  "assassination", "coup",
 ];
 const BULLISH_KW = [
-  "ceasefire",
-  "peace",
-  "deal",
-  "agreement",
-  "recovery",
-  "stimulus",
-  "rally",
-  "surge",
-  "growth",
-  "approval",
-  "partnership",
-  "trade deal",
-  "signed",
+  "ceasefire", "peace", "deal", "agreement", "recovery", "stimulus", "rally",
+  "surge", "growth", "approval", "partnership", "trade deal", "signed",
   "breakthrough",
 ];
 
@@ -84,29 +56,14 @@ function scoreSentiment(text: string): {
 function classifyCategory(text: string): string {
   const t = text.toLowerCase();
   if (
-    /hantavirus|mpox|monkeypox|ebola|sars|mers|pandemic|epidemic|outbreak|novel virus|new strain|pathogen|contagion|quarantine|virus spread|health emergency|disease spread|WHO declares|CDC alert|infectious disease|bird flu|avian flu/.test(
-      t,
-    )
-  )
-    return "pandemic";
-  if (
-    /hospital|patient|health|medical|vaccine|vaccination|treatment|drug approval|clinical trial/.test(
-      t,
-    )
-  )
-    return "health";
-  if (
-    /war|conflict|attack|military|troops|missile|bomb|nuclear|weapon|drone|soldier|airstrike/.test(
-      t,
-    )
-  )
-    return "conflict";
-  if (/election|president|prime minister|government|congress|parliament|vote|senator/.test(t))
-    return "politics";
+    /hantavirus|mpox|monkeypox|ebola|sars|mers|pandemic|epidemic|outbreak|novel virus|new strain|pathogen|contagion|quarantine|virus spread|health emergency|disease spread|WHO declares|CDC alert|infectious disease|bird flu|avian flu/.test(t)
+  ) return "pandemic";
+  if (/hospital|patient|health|medical|vaccine|vaccination|treatment|drug approval|clinical trial/.test(t)) return "health";
+  if (/war|conflict|attack|military|troops|missile|bomb|nuclear|weapon|drone|soldier|airstrike/.test(t)) return "conflict";
+  if (/election|president|prime minister|government|congress|parliament|vote|senator/.test(t)) return "politics";
   if (/oil|opec|energy|gas|pipeline|petroleum|barrel/.test(t)) return "energy";
   if (/trade|tariff|sanction|export|import|wto|supply chain/.test(t)) return "trade";
-  if (/rate|inflation|gdp|economy|recession|central bank|fed|ecb|boe|monetary/.test(t))
-    return "macro";
+  if (/rate|inflation|gdp|economy|recession|central bank|fed|ecb|boe|monetary/.test(t)) return "macro";
   return "geopolitics";
 }
 
@@ -175,11 +132,16 @@ function parseRSS(xml: string, sourceName: string): NewsItem[] {
   return items;
 }
 
-let _cache: { items: NewsItem[]; expiry: number } | null = null;
+interface NewsCache {
+  items: NewsItem[];
+  expiry: number;
+}
 
-export async function fetchGeopoliticsNews(): Promise<NewsItem[]> {
-  if (_cache && Date.now() < _cache.expiry) return _cache.items;
+let _cache: NewsCache | null = null;
+let _staleCache: NewsItem[] | null = null;
+let _refreshing = false;
 
+async function _fetchNewsRaw(): Promise<NewsItem[]> {
   const all: NewsItem[] = [];
 
   await Promise.all(
@@ -204,7 +166,7 @@ export async function fetchGeopoliticsNews(): Promise<NewsItem[]> {
   all.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 
   if (all.length === 0) {
-    logger.error("All news feeds failed — returning empty news list");
+    logger.warn("All news feeds failed");
     return [];
   }
 
@@ -218,9 +180,55 @@ export async function fetchGeopoliticsNews(): Promise<NewsItem[]> {
     }
   }
 
-  const result = uniqueItems.slice(0, 30);
-  _cache = { items: result, expiry: Date.now() + 3 * 60 * 1000 };
-  return result;
+  return uniqueItems.slice(0, 30);
+}
+
+const NEWS_TTL_MS = 10 * 60 * 1000;
+
+export async function fetchGeopoliticsNews(): Promise<NewsItem[]> {
+  if (_cache && Date.now() < _cache.expiry) return _cache.items;
+
+  if (_staleCache && !_refreshing) {
+    _refreshing = true;
+    _fetchNewsRaw()
+      .then((items) => {
+        if (items.length > 0) {
+          _cache = { items, expiry: Date.now() + NEWS_TTL_MS };
+          _staleCache = items;
+        }
+      })
+      .catch((err) => {
+        logger.warn({ err }, "Background news refresh failed");
+        if (_staleCache) {
+          _cache = { items: _staleCache, expiry: Date.now() + 60_000 };
+        }
+      })
+      .finally(() => {
+        _refreshing = false;
+      });
+    return _staleCache;
+  }
+
+  try {
+    const items = await _fetchNewsRaw();
+    if (items.length > 0) {
+      _cache = { items, expiry: Date.now() + NEWS_TTL_MS };
+      _staleCache = items;
+      return items;
+    }
+    if (_staleCache) {
+      _cache = { items: _staleCache, expiry: Date.now() + 60_000 };
+      return _staleCache;
+    }
+    return [];
+  } catch (err) {
+    logger.error({ err }, "News fetch failed");
+    if (_staleCache) {
+      _cache = { items: _staleCache, expiry: Date.now() + 60_000 };
+      return _staleCache;
+    }
+    return [];
+  }
 }
 
 const SYMBOL_KEYWORDS: Record<string, string[]> = {

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useGetMarketPrices } from "@workspace/api-client-react";
 import type { MarketPrice } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Minus, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw, WifiOff } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
 
 function Sparkline({ data, positive }: { data: number[]; positive: boolean }) {
@@ -65,7 +65,7 @@ function AssetRow({ asset, onSelect }: { asset: MarketPrice; onSelect: () => voi
 }
 
 export function MarketOverview() {
-  const { data: prices, isLoading, refetch, isFetching } = useGetMarketPrices();
+  const { data: prices, isLoading, error, refetch, isFetching } = useGetMarketPrices();
   const [filter, setFilter] = useState<"all" | "crypto" | "stock">("all");
 
   const priceList = Array.isArray(prices) ? prices : [];
@@ -104,7 +104,21 @@ export function MarketOverview() {
           </button>
         </div>
 
-        {isLoading ? (
+        {error && !isLoading && priceList.length === 0 ? (
+          <div className="py-6 flex flex-col items-center gap-3">
+            <WifiOff className="w-8 h-8 text-muted-foreground/40" />
+            <p className="text-[11px] text-muted-foreground font-mono text-center">
+              Market data temporarily unavailable
+            </p>
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-[11px] font-mono text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+            >
+              {isFetching ? "Retrying..." : "Retry"}
+            </button>
+          </div>
+        ) : isLoading ? (
           <div className="space-y-2">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
@@ -128,7 +142,7 @@ export function MarketOverview() {
 
         {priceList.length > 0 && (
           <p className="text-[9px] font-mono text-muted-foreground/40 mt-3 text-center">
-            Prices auto-refresh every 2 min · Last updated {new Date(priceList[0]?.updatedAt ?? Date.now()).toLocaleTimeString()}
+            Prices auto-refresh every 5 min · Last updated {new Date(priceList[0]?.updatedAt ?? Date.now()).toLocaleTimeString()}
           </p>
         )}
       </CardContent>

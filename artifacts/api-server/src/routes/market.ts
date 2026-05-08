@@ -29,6 +29,8 @@ router.get("/market/prices", async (req, res): Promise<void> => {
   const raw: unknown[] = [];
 
   if (cryptos.status === "fulfilled") raw.push(...cryptos.value);
+  else logger.warn({ err: cryptos.reason }, "Crypto prices fetch failed");
+
   for (const stock of stocks) {
     if (stock.status === "fulfilled") raw.push(stock.value);
   }
@@ -43,11 +45,6 @@ router.get("/market/prices", async (req, res): Promise<void> => {
       return parsed.data;
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
-
-  if (prices.length === 0) {
-    res.status(503).json({ error: "Market data unavailable — all price sources failed" });
-    return;
-  }
 
   res.json(prices);
 });
