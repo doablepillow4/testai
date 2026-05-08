@@ -11,6 +11,11 @@
     "db:push": "pnpm --filter @workspace/db run push"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.2",
     "concurrently": "^8.2.2"
   }
 }
