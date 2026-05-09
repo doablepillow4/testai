@@ -49,10 +49,10 @@ interface GeoImpactAnalysis {
   narrative: string;
 }
 
-// FIX: Stable key for each news item — item.id is optional and can be undefined,
-// which caused expand/collapse to never work and geo-impact cache to collide.
+// Stable key for each news item. id is required per spec but we fall back to
+// title slice defensively in case a non-conforming server omits it.
 function newsKey(item: NewsItem): string {
-  return item.id != null ? String(item.id) : item.title.slice(0, 80);
+  return item.id ? String(item.id) : item.title.slice(0, 80);
 }
 
 // ─── Geo-impact API hook ──────────────────────────────────────────────────────
@@ -69,7 +69,6 @@ async function fetchGeoImpact(item: NewsItem): Promise<GeoImpactAnalysis> {
     body: JSON.stringify({
       headline: item.title,
       description: item.description ?? "",
-      category: item.category ?? "geopolitics",
       isBreaking: item.isBreaking ?? false,
     }),
     signal: AbortSignal.timeout(8000),
@@ -356,7 +355,7 @@ function classifyRegion(market: { question: string; category?: string | null }):
   }
   const globalCfg = REGION_CONFIG["global"];
   if (globalCfg && globalCfg.keywords.some((kw) => text.includes(kw))) return "global";
-  return "americas";
+  return "global";
 }
 
 function riskLevel(yesPrice: number) {
@@ -416,10 +415,10 @@ export default function Geopolitics() {
     isLoading: loadingNews,
     error: newsError,
   } = useGetNews(
-    { live: true },  // query params — passed to ?live=true on the API call
+    {},  // no documented query params for /news except optional symbol
     {
       query: {
-        queryKey: getGetNewsQueryKey({ live: true }),
+        queryKey: getGetNewsQueryKey({}),
         refetchInterval: 60_000,
         refetchOnMount: "always",
         staleTime: 0,
@@ -433,10 +432,10 @@ export default function Geopolitics() {
     isLoading: loadingMarkets,
     error: marketsError,
   } = useGetPolymarketMarkets(
-    { live: true },
+    {},  // no documented query params for /polymarket/markets except optional limit
     {
       query: {
-        queryKey: getGetPolymarketMarketsQueryKey({ live: true }),
+        queryKey: getGetPolymarketMarketsQueryKey({}),
         refetchInterval: 60_000,
         refetchOnMount: "always",
         staleTime: 0,
@@ -474,15 +473,18 @@ export default function Geopolitics() {
     return groups;
   }, [markets]);
 
-  // FIX: Use newsKey() everywhere instead of item.id to get a stable, non-undefined key
-  async function handleExpand(item: NewsItem) {
+  // Refs so handleExpand can read current state without being recreated on every render
+  const analysesRef = React.useRef(analyses);
+  const analysisErrorsRef = React.useRef(analysisErrors);
+  const loadingAnalysisRef = React.useRef(loadingAnalysis);
+  React.useEffect(() => { analysesRef.current = analyses; }, [analyses]);
+  React.useEffect(() => { analysisErrorsRef.current = analysisErrors; }, [analysisErrors]);
+  React.useEffect(() => { loadingAnalysisRef.current = loadingAnalysis; }, [loadingAnalysis]);
+
+  const handleExpand = React.useCallback(async (item: NewsItem) => {
     const key = newsKey(item);
-    if (expandedNews === key) {
-      setExpandedNews("");
-      return;
-    }
-    setExpandedNews(key);
-    if (!analyses[key] && !analysisErrors[key]) {
+    setExpandedNews((prev) => (prev === key ? "" : key));
+    if (!analysesRef.current[key] && !analysisErrorsRef.current[key] && !loadingAnalysisRef.current[key]) {
       setLoadingAnalysis((prev) => ({ ...prev, [key]: true }));
       try {
         const analysis = await fetchGeoImpact(item);
@@ -496,7 +498,13 @@ export default function Geopolitics() {
         setLoadingAnalysis((prev) => ({ ...prev, [key]: false }));
       }
     }
-  }
+  }, []);
+
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const isLoading = loadingNews || loadingMarkets;
 
@@ -516,9 +524,9 @@ export default function Geopolitics() {
         </div>
         <div className="flex items-center gap-3">
           <div className="text-[10px] font-mono text-muted-foreground/50 text-right leading-relaxed">
-            {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+            {now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
             <br />
-            {new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+            {now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
           </div>
           <div className="px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
@@ -771,23 +779,36 @@ export default function Geopolitics() {
                                   <div className="text-[10px] font-mono text-muted-foreground uppercase mb-1">
                                     Threat Type
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    {getThreatConfig(analyses[key].type).icon}
-                                    <span className={`text-xs font-bold uppercase ${getThreatConfig(analyses[key].type).color}`}>
-                                      {analyses[key].label}
-                                    </span>
-                                  </div>
+                                  {(() => {
+                                    const threat = getThreatConfig(analyses[key].type);
+                                    const severity = getSeverityConfig(analyses[key].severity);
+                                    return (
+                                      <>
+                                        <div className="flex items-center gap-2">
+                                          {threat.icon}
+                                          <span className={`text-xs font-bold uppercase ${threat.color}`}>
+                                            {analyses[key].label}
+                                          </span>
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
                                 </div>
                                 <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                                   <div className="text-[10px] font-mono text-muted-foreground uppercase mb-1">
                                     Severity
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${getSeverityConfig(analyses[key].severity)?.bg}`} />
-                                    <span className={`text-xs font-bold uppercase ${getSeverityConfig(analyses[key].severity)?.color}`}>
-                                      {getSeverityConfig(analyses[key].severity)?.label}
-                                    </span>
-                                  </div>
+                                  {(() => {
+                                    const severity = getSeverityConfig(analyses[key].severity);
+                                    return (
+                                      <div className="flex items-center gap-2">
+                                        <div className={`w-1.5 h-1.5 rounded-full ${severity?.bg}`} />
+                                        <span className={`text-xs font-bold uppercase ${severity?.color}`}>
+                                          {severity?.label}
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               </div>
 
@@ -843,7 +864,9 @@ export default function Geopolitics() {
                                 </div>
                               </div>
 
-                              {markets.length > 0 && (
+                              {markets.length > 0 && (() => {
+                                const relatedMarkets = findRelatedMarkets(item.title, item.description ?? "", markets);
+                                return (
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
                                     <BarChart2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -852,7 +875,7 @@ export default function Geopolitics() {
                                     </span>
                                   </div>
                                   <div className="space-y-1.5">
-                                    {findRelatedMarkets(item.title, item.description ?? "", markets).map((m) => (
+                                    {relatedMarkets.map((m) => (
                                       <div
                                         key={m.id}
                                         className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.06] transition-colors"
@@ -879,14 +902,15 @@ export default function Geopolitics() {
                                         </div>
                                       </div>
                                     ))}
-                                    {findRelatedMarkets(item.title, item.description ?? "", markets).length === 0 && (
+                                    {relatedMarkets.length === 0 && (
                                       <div className="text-[10px] text-muted-foreground/50 italic py-2">
                                         No direct Polymarket correlation for this event.
                                       </div>
                                     )}
                                   </div>
                                 </div>
-                              )}
+                                );
+                              })()}
 
                               <div className="flex items-center justify-between pt-2">
                                 <div className="flex items-center gap-2">
