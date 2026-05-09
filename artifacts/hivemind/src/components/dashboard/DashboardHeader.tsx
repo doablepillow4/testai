@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useGetMarketPrices, useGetPredictionsSummary } from "@workspace/api-client-react";
 import { Brain, TrendingUp, TrendingDown, Minus, Activity } from "lucide-react";
 
@@ -16,7 +16,14 @@ export function DashboardHeader() {
   const marketMood =
     bullishCount > bearishCount ? "bullish" : bearishCount > bullishCount ? "bearish" : "neutral";
 
-  const now = new Date();
+  // FIX: Use state so the clock actually ticks; computing `new Date()` inline
+  // only runs once at mount and then goes stale until the next re-render.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
   const dateStr = now.toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",

@@ -299,11 +299,16 @@ router.get("/lattice/leaderboard", async (_req, res): Promise<void> => {
 // ─── Belief History ───────────────────────────────────────────────────────────
 
 router.get("/lattice/belief-history/:symbol", async (req, res): Promise<void> => {
-  try {
-    const { symbol } = GetBeliefHistoryParams.parse(req.params);
-    const { limit } = GetBeliefHistoryQueryParams.parse(req.query);
+  const paramsParsed = GetBeliefHistoryParams.safeParse(req.params);
+  if (!paramsParsed.success) {
+    res.status(400).json({ error: "symbol is required" });
+    return;
+  }
+  const queryParsed = GetBeliefHistoryQueryParams.safeParse(req.query);
+  const limit = queryParsed.success ? queryParsed.data.limit : undefined;
 
-    const rows = await queryBeliefHistory(symbol.toUpperCase(), limit);
+  try {
+    const rows = await queryBeliefHistory(paramsParsed.data.symbol.toUpperCase(), limit);
     const validated = GetBeliefHistoryResponse.parse(rows);
     res.json(validated);
   } catch (err) {

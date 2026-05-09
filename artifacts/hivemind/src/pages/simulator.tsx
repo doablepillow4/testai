@@ -178,7 +178,7 @@ function TickerCombobox({ value, onChange, options, onQuoteLookup }: TickerCombo
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [value, options]);
+  }, []);
 
   const q = query.trim().toUpperCase();
   const filtered = q
@@ -419,7 +419,7 @@ export default function Simulator() {
     priceList.find((p) => p.symbol === selectedSymbol) ??
     (quotedAsset?.symbol === selectedSymbol ? quotedAsset : null);
   const isCustomTicker = selectedSymbol.length > 0 && !knownAsset;
-  const effectivePrice = knownAsset?.price ?? parseFloat(customPrice) ?? 0;
+  const effectivePrice = knownAsset?.price ?? (parseFloat(customPrice) || 0);
 
   function handleTickerChange(symbol: string, price?: number) {
     setSelectedSymbol(symbol);

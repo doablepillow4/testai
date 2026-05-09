@@ -73,61 +73,65 @@ export async function runAutonomousScan(symbolOverride?: string[]): Promise<Scan
 
   logAgentEvent("scan_started", `Autonomous scan started for ${symbols.length} symbols`, { symbols });
 
-  await Promise.allSettled(
-    symbols.map(async (symbol) => {
-      try {
-        const result = await runLattice(symbol, "7d", false);
-        const { finalPrediction, regime } = result;
-        const urgency = scoreUrgency(finalPrediction.hivemindScore, finalPrediction.confidence, regime);
+  try {
+    await Promise.allSettled(
+      symbols.map(async (symbol) => {
+        try {
+          const result = await runLattice(symbol, "7d", false);
+          const { finalPrediction, regime } = result;
+          const urgency = scoreUrgency(finalPrediction.hivemindScore, finalPrediction.confidence, regime);
 
-        // Only surface alerts for meaningful signals
-        if (finalPrediction.hivemindScore >= 55 || regime === "crisis") {
-          const alert: ScanAlert = {
-            symbol,
-            direction: finalPrediction.direction,
-            hivemindScore: finalPrediction.hivemindScore,
-            confidence: finalPrediction.confidence,
-            regime,
-            reason: buildAlertReason(finalPrediction.direction, finalPrediction.hivemindScore, regime, finalPrediction.confidence),
-            urgency,
-          };
-          alerts.push(alert);
+          // Only surface alerts for meaningful signals
+          if (finalPrediction.hivemindScore >= 55 || regime === "crisis") {
+            const alert: ScanAlert = {
+              symbol,
+              direction: finalPrediction.direction,
+              hivemindScore: finalPrediction.hivemindScore,
+              confidence: finalPrediction.confidence,
+              regime,
+              reason: buildAlertReason(finalPrediction.direction, finalPrediction.hivemindScore, regime, finalPrediction.confidence),
+              urgency,
+            };
+            alerts.push(alert);
 
-          logAgentEvent("scan_symbol_done", `${symbol}: ${finalPrediction.direction} (score ${finalPrediction.hivemindScore.toFixed(0)})`, {
-            symbol,
-            direction: finalPrediction.direction,
-            hivemindScore: finalPrediction.hivemindScore,
-            urgency,
-          });
+            logAgentEvent("scan_symbol_done", `${symbol}: ${finalPrediction.direction} (score ${finalPrediction.hivemindScore.toFixed(0)})`, {
+              symbol,
+              direction: finalPrediction.direction,
+              hivemindScore: finalPrediction.hivemindScore,
+              urgency,
+            });
+          }
+        } catch (err) {
+          logger.warn({ symbol, err }, "Auto-scanner: lattice run failed for symbol");
         }
-      } catch (err) {
-        logger.warn({ symbol, err }, "Auto-scanner: lattice run failed for symbol");
-      }
-    }),
-  );
+      }),
+    );
 
-  alerts.sort((a, b) => b.hivemindScore - a.hivemindScore);
+    alerts.sort((a, b) => b.hivemindScore - a.hivemindScore);
 
-  const highCount = alerts.filter((a) => a.urgency === "high").length;
-  const summary =
-    alerts.length === 0
-      ? `Scan complete. All ${symbols.length} symbols within normal parameters — no strong signals detected.`
-      : `Scan complete. ${alerts.length} signal(s) detected across ${symbols.length} symbols. ${highCount} high-urgency alert(s). Top: ${alerts[0]?.symbol} ${alerts[0]?.direction} (score ${alerts[0]?.hivemindScore.toFixed(0)}).`;
+    const highCount = alerts.filter((a) => a.urgency === "high").length;
+    const summary =
+      alerts.length === 0
+        ? `Scan complete. All ${symbols.length} symbols within normal parameters — no strong signals detected.`
+        : `Scan complete. ${alerts.length} signal(s) detected across ${symbols.length} symbols. ${highCount} high-urgency alert(s). Top: ${alerts[0]?.symbol} ${alerts[0]?.direction} (score ${alerts[0]?.hivemindScore.toFixed(0)}).`;
 
-  const scan: ScanResult = {
-    scannedAt: new Date().toISOString(),
-    durationMs: Date.now() - t0,
-    symbolsScanned: symbols.length,
-    alerts,
-    summary,
-  };
+    const scan: ScanResult = {
+      scannedAt: new Date().toISOString(),
+      durationMs: Date.now() - t0,
+      symbolsScanned: symbols.length,
+      alerts,
+      summary,
+    };
 
-  _lastScan = scan;
-  _scanRunning = false;
+    _lastScan = scan;
 
-  logAgentEvent("scan_completed", summary, { alertCount: alerts.length, durationMs: scan.durationMs });
+    logAgentEvent("scan_completed", summary, { alertCount: alerts.length, durationMs: scan.durationMs });
 
-  return scan;
+    return scan;
+  } finally {
+    // Always release the lock, even if an unexpected error is thrown above.
+    _scanRunning = false;
+  }
 }
 
 export function getLastScan(): ScanResult | null {
