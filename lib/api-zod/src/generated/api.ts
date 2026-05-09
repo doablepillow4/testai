@@ -18,6 +18,10 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary Get current prices for all tracked symbols
  */
+export const GetMarketPricesQueryParams = zod.object({
+  "live": zod.coerce.boolean().optional()
+})
+
 export const GetMarketPricesResponseItem = zod.object({
   "symbol": zod.string(),
   "name": zod.string(),

@@ -3,7 +3,9 @@ import { useGetMarketPrices, useGetPredictionsSummary } from "@workspace/api-cli
 import { Brain, TrendingUp, TrendingDown, Minus, Activity } from "lucide-react";
 
 export function DashboardHeader() {
-  const { data: prices } = useGetMarketPrices({ live: true }, {
+  const { data: prices } = useGetMarketPrices({
+    live: true,
+  }, {
     query: { refetchOnMount: "always", staleTime: 0 },
   });
   const { data: summary } = useGetPredictionsSummary();

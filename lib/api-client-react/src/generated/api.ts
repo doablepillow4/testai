@@ -26,6 +26,7 @@ import type {
   ErrorResponse,
   GetBeliefHistoryParams,
   GetMarketHistoryParams,
+  GetMarketPricesParams,
   GetMarketRegimeParams,
   GetNewsParams,
   GetPolymarketMarketsParams,
@@ -136,17 +137,24 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 /**
  * @summary Get current prices for all tracked symbols
  */
-export const getGetMarketPricesUrl = () => {
+export const getGetMarketPricesUrl = (params?: GetMarketPricesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
-  
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/market/prices`
+  return stringifiedParams.length > 0 ? `/api/market/prices?${stringifiedParams}` : `/api/market/prices`
 }
 
-export const getMarketPrices = async ( options?: RequestInit): Promise<MarketPrice[]> => {
+export const getMarketPrices = async (params?: GetMarketPricesParams, options?: RequestInit): Promise<MarketPrice[]> => {
   
-  return customFetch<MarketPrice[]>(getGetMarketPricesUrl(),
+  return customFetch<MarketPrice[]>(getGetMarketPricesUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -159,23 +167,23 @@ export const getMarketPrices = async ( options?: RequestInit): Promise<MarketPri
 
 
 
-export const getGetMarketPricesQueryKey = () => {
+export const getGetMarketPricesQueryKey = (params?: GetMarketPricesParams,) => {
     return [
-    `/api/market/prices`
+    `/api/market/prices`, ...(params ? [params] : [])
     ] as const;
     }
 
     
-export const getGetMarketPricesQueryOptions = <TData = Awaited<ReturnType<typeof getMarketPrices>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarketPrices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetMarketPricesQueryOptions = <TData = Awaited<ReturnType<typeof getMarketPrices>>, TError = ErrorType<unknown>>(params?: GetMarketPricesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarketPrices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMarketPricesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetMarketPricesQueryKey(params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMarketPrices>>> = ({ signal }) => getMarketPrices({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMarketPrices>>> = ({ signal }) => getMarketPrices(params, { signal, ...requestOptions });
 
       
 
@@ -193,11 +201,11 @@ export type GetMarketPricesQueryError = ErrorType<unknown>
  */
 
 export function useGetMarketPrices<TData = Awaited<ReturnType<typeof getMarketPrices>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarketPrices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetMarketPricesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarketPrices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
   
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetMarketPricesQueryOptions(options)
+  const queryOptions = getGetMarketPricesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

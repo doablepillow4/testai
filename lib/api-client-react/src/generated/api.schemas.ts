@@ -393,6 +393,10 @@ export interface RegimeStatus {
   description: string;
 }
 
+export type GetMarketPricesParams = {
+live?: boolean;
+};
+
 export type GetMarketHistoryParams = {
 days?: number;
 };

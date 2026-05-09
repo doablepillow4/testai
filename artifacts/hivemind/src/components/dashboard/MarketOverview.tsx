@@ -65,7 +65,9 @@ function AssetRow({ asset, onSelect }: { asset: MarketPrice; onSelect: () => voi
 }
 
 export function MarketOverview() {
-  const { data: prices, isLoading, error, refetch, isFetching } = useGetMarketPrices({ live: true }, {
+  const { data: prices, isLoading, error, refetch, isFetching } = useGetMarketPrices({
+    live: true,
+  }, {
     query: { refetchOnMount: "always", staleTime: 0 },
   });
   const [filter, setFilter] = useState<"all" | "crypto" | "stock">("all");

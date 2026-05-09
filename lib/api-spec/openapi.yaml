@@ -42,6 +42,12 @@ paths:
       operationId: getMarketPrices
       tags: [market]
       summary: Get current prices for all tracked symbols
+      parameters:
+        - name: live
+          in: query
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: Market prices

@@ -415,10 +415,10 @@ export default function Geopolitics() {
     isLoading: loadingNews,
     error: newsError,
   } = useGetNews(
-    {},  // no documented query params for /news except optional symbol
+    { live: true },
     {
       query: {
-        queryKey: getGetNewsQueryKey({}),
+        queryKey: getGetNewsQueryKey({ live: true }),
         refetchInterval: 60_000,
         refetchOnMount: "always",
         staleTime: 0,
@@ -432,10 +432,10 @@ export default function Geopolitics() {
     isLoading: loadingMarkets,
     error: marketsError,
   } = useGetPolymarketMarkets(
-    {},  // no documented query params for /polymarket/markets except optional limit
+    { live: true },
     {
       query: {
-        queryKey: getGetPolymarketMarketsQueryKey({}),
+        queryKey: getGetPolymarketMarketsQueryKey({ live: true }),
         refetchInterval: 60_000,
         refetchOnMount: "always",
         staleTime: 0,
