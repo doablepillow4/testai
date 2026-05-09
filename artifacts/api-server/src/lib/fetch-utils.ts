@@ -3,6 +3,7 @@ import { logger } from "./logger";
 export const DEFAULT_BROWSER_HEADERS: Record<string, string> = {
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Accept": "*/*",
   "Accept-Language": "en-US,en;q=0.9",
   // FIX: Remove "Accept-Encoding: gzip, deflate, br" — Node's fetch does NOT
   // automatically decompress responses the way browsers do. Sending this header

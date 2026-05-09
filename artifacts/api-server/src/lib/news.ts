@@ -186,7 +186,7 @@ async function _fetchNewsRaw(): Promise<NewsItem[]> {
             Accept: "application/rss+xml, application/xml, text/xml, application/atom+xml, */*;q=1.0",
             Referer: url,
           },
-        }, 2, 12000);
+        }, 2, 8000);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
         // FIX: Guard against servers returning HTML error pages instead of XML

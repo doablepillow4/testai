@@ -113,13 +113,20 @@ async function _fetchStockPriceRaw(symbol: string) {
       );
       const sparkline = sanitizeSparkline(validCloses.slice(-15));
 
-      const price = safeNum(meta.regularMarketPrice);
+      // FIX: meta.regularMarketPrice is sometimes null even when the series has data.
+      // Fall back to the last valid close price from the indicators if needed.
+      const price = safeNum(meta.regularMarketPrice) || validCloses[validCloses.length - 1] || 0;
       if (price === 0) {
         lastError = new Error(`Zero/missing price returned by Yahoo Finance for ${symbol}`);
         continue;
       }
 
-      const prevClose = safeNum(meta.chartPreviousClose) || safeNum(meta.previousClose) || price;
+      // FIX: Be more exhaustive with previous close fallbacks to ensure change % is accurate.
+      const prevClose =
+        safeNum(meta.chartPreviousClose) ||
+        safeNum(meta.previousClose) ||
+        validCloses[validCloses.length - 2] ||
+        price;
       const rawChange = price - prevClose;
       const rawChangePercent = prevClose !== 0 ? (rawChange / prevClose) * 100 : 0;
 
