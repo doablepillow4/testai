@@ -6,7 +6,11 @@ export const DEFAULT_BROWSER_HEADERS: Record<string, string> = {
   Accept:
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
   "Accept-Language": "en-US,en;q=0.9",
-  "Accept-Encoding": "gzip, deflate, br",
+  // FIX: Remove "Accept-Encoding: gzip, deflate, br" — Node's fetch does NOT
+  // automatically decompress responses the way browsers do. Sending this header
+  // tells the server to compress, but the raw compressed bytes arrive and
+  // res.text() / res.json() reads gibberish. This is the #1 cause of RSS and
+  // API parse failures in server-side Node fetch. Let Node negotiate its own encoding.
   "DNT": "1",
   Connection: "keep-alive",
   "Cache-Control": "no-cache",
@@ -24,11 +28,12 @@ function normalizeHeaders(headers?: unknown): Record<string, string> {
 }
 
 function shouldRetry(error: unknown, response?: Response): boolean {
-  if (error) {
-    return true;
-  }
+  if (error) return true;
   if (!response) return true;
-  if (response.status === 429) return true;
+  // FIX: Do NOT retry 429 here — callers handle 429 with their own backoff logic
+  // (e.g. CoinGecko respects Retry-After). Retrying 429 immediately just burns
+  // the attempt budget and prolongs the lockout window.
+  if (response.status === 429) return false;
   if (response.status >= 500) return true;
   return false;
 }
@@ -50,7 +55,12 @@ export async function fetchWithRetry(
 
   let lastError: unknown = null;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    const signal = init.signal ?? AbortSignal.timeout(timeoutMs);
+    // FIX: Create a fresh AbortSignal per attempt. The original code reused
+    // `init.signal ?? AbortSignal.timeout(timeoutMs)` — if init.signal is
+    // undefined, AbortSignal.timeout() is evaluated ONCE outside the loop
+    // (because of how JS short-circuit evaluation works with ??), so by attempt 2
+    // the signal is already expired and every retry aborts immediately.
+    const signal = AbortSignal.timeout(timeoutMs);
     try {
       const response = await fetch(url, {
         ...init,
